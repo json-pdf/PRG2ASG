@@ -1,4 +1,10 @@
-﻿using System;
+﻿//==========================================================
+// Student Number : S10274903
+// Student Name : Javier Chua
+// Partner Name : Jayson Chai
+//==========================================================
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

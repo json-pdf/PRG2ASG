@@ -5,7 +5,7 @@
 using PRG2ASG;
 
 
-// Jayson -- Q2
+// Jayson -- feature 2
 void LoadCustomersFromFile(List<Customer> customerList)
 {
     string[] stringArray;
