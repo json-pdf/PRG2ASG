@@ -16,14 +16,14 @@ static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
         return;
     }
 
-    // Skip header line (index 0)
+    // Skip header line
     for (int i = 1; i < lines.Length; i++)
     {
         if (string.IsNullOrWhiteSpace(lines[i])) continue;
 
         try
         {
-         
+            // RestaurantId,RestaurantName,RestaurantEmail
             string[] data = lines[i].Split(',');
 
             if (data.Length < 3) continue;
@@ -34,7 +34,7 @@ static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
 
             Restaurant r = new Restaurant(id, name, email);
 
-         
+            // Create 1 default menu for each restaurant
             Menu m = new Menu("M_" + id, name + " Menu");
             r.AddMenu(m);
 
@@ -61,15 +61,15 @@ static void LoadFoodItemsFromFile(List<Restaurant> restaurantList)
         return;
     }
 
-    // Skip header line (index 0)
+
     for (int i = 1; i < lines.Length; i++)
     {
         if (string.IsNullOrWhiteSpace(lines[i])) continue;
 
         try
         {
-          
-            string[] data = lines[i].Split(',');
+            // RestaurantId,ItemName,ItemDesc,ItemPrice
+            string[] data = lines[i].Split(',', 4);
 
             if (data.Length < 4) continue;
 
@@ -84,14 +84,17 @@ static void LoadFoodItemsFromFile(List<Restaurant> restaurantList)
 
             if (restaurant != null)
             {
-            
                 FoodItem foodItem = new FoodItem(itemName, itemDesc, itemPrice, "");
 
-               
-                if (restaurant.menuList.Count > 0)
+                // Safety: ensure menu exists
+                if (restaurant.menuList.Count == 0)
                 {
-                    restaurant.menuList[0].AddFoodItem(foodItem);
+                    Menu m = new Menu("M_" + restaurant.RestaurantId,
+                                      restaurant.RestaurantName + " Menu");
+                    restaurant.AddMenu(m);
                 }
+
+                restaurant.menuList[0].AddFoodItem(foodItem);
             }
         }
         catch (Exception ex)
