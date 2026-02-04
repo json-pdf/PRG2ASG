@@ -23,7 +23,7 @@ static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
 
         try
         {
-            // Expected: RestaurantId,RestaurantName,RestaurantEmail
+         
             string[] data = lines[i].Split(',');
 
             if (data.Length < 3) continue;
@@ -34,7 +34,7 @@ static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
 
             Restaurant r = new Restaurant(id, name, email);
 
-            // Create 1 default menu (since fooditems.csv has no menu info)
+         
             Menu m = new Menu("M_" + id, name + " Menu");
             r.AddMenu(m);
 
@@ -68,7 +68,7 @@ static void LoadFoodItemsFromFile(List<Restaurant> restaurantList)
 
         try
         {
-            // Expected: RestaurantId,ItemName,ItemDesc,ItemPrice
+          
             string[] data = lines[i].Split(',');
 
             if (data.Length < 4) continue;
@@ -84,10 +84,10 @@ static void LoadFoodItemsFromFile(List<Restaurant> restaurantList)
 
             if (restaurant != null)
             {
-                // Your FoodItem uses Customise (string), keep empty for now
+            
                 FoodItem foodItem = new FoodItem(itemName, itemDesc, itemPrice, "");
 
-                // Add to first menu that was created in LoadRestaurantsFromFile
+               
                 if (restaurant.menuList.Count > 0)
                 {
                     restaurant.menuList[0].AddFoodItem(foodItem);
