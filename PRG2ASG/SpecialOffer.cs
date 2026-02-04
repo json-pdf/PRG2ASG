@@ -1,7 +1,7 @@
 ﻿//==========================================================
-// Student Number : S10274903
-// Student Name : Javier Chua
-// Partner Name : Jayson Chai
+// Student Number : S10268704
+// Student Name : Jayson Chai
+// Partner Name : Javier Chua
 //==========================================================
 
 using System;
