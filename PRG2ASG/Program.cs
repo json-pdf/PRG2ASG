@@ -157,7 +157,7 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
 {
     try
     {
-        string[] lines = File.ReadAllLines("orders-Copy.csv");
+        string[] lines = File.ReadAllLines("orders_-_Copy.csv");
 
         for (int i = 1; i < lines.Length; i++)
         {
@@ -235,7 +235,7 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error reading orders-Copy.csv: {ex.Message}");
+        Console.WriteLine($"Error reading orders_-_Copy.csv: {ex.Message}");
     }
 }
 
