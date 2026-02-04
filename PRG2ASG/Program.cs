@@ -157,11 +157,11 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
 {
     try
     {
-        string[] lines = File.ReadAllLines("orders_-_Copy.csv");
+        string[] lines = File.ReadAllLines("orders_-_Copy.csv");  
 
         for (int i = 1; i < lines.Length; i++)
         {
-            if (lines[i] == "") continue;
+            if (string.IsNullOrWhiteSpace(lines[i])) continue;
 
             try
             {
@@ -169,16 +169,22 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
                 if (data.Length < 10) continue;
 
                 int orderId = Convert.ToInt32(data[0]);
-                string customerEmail = data[1];
-                string restaurantId = data[2];
-                DateTime deliveryDate = Convert.ToDateTime(data[3]);
-                TimeSpan deliveryTime = TimeSpan.Parse(data[4]);
+                string customerEmail = data[1].Trim();
+                string restaurantId = data[2].Trim();
+
+               
+                DateTime deliveryDate = DateTime.ParseExact(data[3].Trim(), "dd/MM/yyyy", null);
+                TimeSpan deliveryTime = TimeSpan.Parse(data[4].Trim());
                 DateTime deliveryDateTime = deliveryDate.Date + deliveryTime;
-                string deliveryAddress = data[5];
-                DateTime createdDateTime = Convert.ToDateTime(data[6]);
-                double totalAmount = Convert.ToDouble(data[7]);
-                string status = data[8];
-                string items = data[9].Trim('"');
+
+                string deliveryAddress = data[5].Trim();
+
+             
+                DateTime createdDateTime = DateTime.ParseExact(data[6].Trim(), "dd/MM/yyyy HH:mm", null);
+
+                double totalAmount = Convert.ToDouble(data[7].Trim());
+                string status = data[8].Trim();
+                string items = data[9].Trim().Trim('"');
 
                 Customer customer = customerList.Find(c => c.EmailAddress == customerEmail);
                 Restaurant restaurant = restaurantList.Find(r => r.RestaurantId == restaurantId);
@@ -216,9 +222,9 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
                                 order.AddOrderedFoodItem(orderedItem);
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            Console.WriteLine($"Error parsing item in order {orderId}");
+                            Console.WriteLine($"Error parsing item in order {orderId}: {ex.Message}");
                         }
                     }
 
@@ -227,9 +233,9 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
                     restaurant.orderQueue.Enqueue(order);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing order line {i + 1}");
+                Console.WriteLine($"Error parsing order line {i + 1}: {ex.Message}");
             }
         }
     }
