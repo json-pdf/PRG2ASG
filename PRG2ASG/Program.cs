@@ -4,12 +4,7 @@
 
 using PRG2ASG;
 
-//==========================================================
-// Student Number : S10268704A
-// Student Name : Jayson Chai
-// Partner Name : Javier Chua
-//==========================================================
-
+//Jayson - feature 2
 void LoadCustomersFromFile(List<Customer> customerList)
 {
     string[] stringArray;
