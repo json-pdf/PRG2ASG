@@ -157,7 +157,7 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
 {
     try
     {
-        string[] lines = File.ReadAllLines("orders_-_Copy.csv");
+        string[] lines = File.ReadAllLines("orders-Copy.csv");
 
         for (int i = 1; i < lines.Length; i++)
         {
@@ -235,7 +235,7 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error reading orders_-_Copy.csv: {ex.Message}");
+        Console.WriteLine($"Error reading orders-Copy.csv: {ex.Message}");
     }
 }
 
@@ -259,3 +259,80 @@ FoodItem FindFoodItemInRestaurant(Restaurant restaurant, string itemName)
     return null;
 }
 
+List<Restaurant> restaurantList = new List<Restaurant>();
+List<Customer> customerList = new List<Customer>();
+List<Order> orderList = new List<Order>();
+
+
+LoadRestaurantsFromFile(restaurantList);
+LoadFoodItemsFromFile(restaurantList);
+LoadCustomersFromFile(customerList);
+LoadOrdersFromFile(orderList, customerList, restaurantList);
+
+
+int totalFoodItems = 0;
+for (int i = 0; i < restaurantList.Count; i++)
+{
+    for (int j = 0; j < restaurantList[i].menuList.Count; j++)
+    {
+        totalFoodItems = totalFoodItems + restaurantList[i].menuList[j].GetFoodList().Count;
+    }
+}
+
+
+Console.WriteLine("Welcome to the Gruberoo Food Delivery System");
+Console.WriteLine(restaurantList.Count + " restaurants loaded!");
+Console.WriteLine(totalFoodItems + " food items loaded!");
+Console.WriteLine(customerList.Count + " customers loaded!");
+Console.WriteLine(orderList.Count + " orders loaded!");
+
+
+bool exit = false;
+while (exit == false)
+{
+    Console.WriteLine("\n===== Gruberoo Food Delivery System =====");
+    Console.WriteLine("1. List all restaurants and menu items");
+    Console.WriteLine("2. List all orders");
+    Console.WriteLine("3. Create a new order");
+    Console.WriteLine("4. Process an order");
+    Console.WriteLine("5. Modify an existing order");
+    Console.WriteLine("6. Delete an existing order");
+    Console.WriteLine("0. Exit");
+    Console.Write("Enter your choice: ");
+
+    string choice = Console.ReadLine();
+
+    if (choice == "1")
+    {
+       
+       
+    }
+    else if (choice == "2")
+    {
+        
+    }
+    else if (choice == "3")
+    {
+        
+    }
+    else if (choice == "4")
+    {
+       
+    }
+    else if (choice == "5")
+    {
+       
+    }
+    else if (choice == "6")
+    {
+        
+    }
+    else if (choice == "0")
+    {
+       
+    }
+    else
+    {
+       
+    }
+}
