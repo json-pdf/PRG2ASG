@@ -1,8 +1,121 @@
-﻿
-
-
 
 using PRG2ASG;
+
+//Javier - feature 1
+static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
+{
+    string[] lines;
+
+    try
+    {
+        lines = File.ReadAllLines("restaurants.csv");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error reading restaurants.csv: " + ex.Message);
+        return;
+    }
+
+    // Skip header
+    for (int i = 1; i < lines.Length; i++)
+    {
+        if (string.IsNullOrWhiteSpace(lines[i])) continue;
+
+        try
+        {
+            // RestaurantId,RestaurantName,RestaurantEmail
+            string[] data = lines[i].Split(',');
+
+            if (data.Length < 3) continue;
+
+            string id = data[0].Trim();
+            string name = data[1].Trim();
+            string email = data[2].Trim();
+
+            Restaurant r = new Restaurant(id, name, email);
+
+            // Create 1 default menu for each restaurant (fooditems.csv has no menu info)
+            Menu m = new Menu("M_" + id, name + " Menu");
+            r.AddMenu(m);
+
+            restaurantList.Add(r);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error parsing line " + (i + 1) + " in restaurants.csv: " + ex.Message);
+        }
+    }
+}
+
+static void LoadFoodItemsFromFile(List<Restaurant> restaurantList)
+{
+    string[] lines;
+
+    try
+    {
+        lines = File.ReadAllLines("fooditems.csv");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error reading fooditems.csv: " + ex.Message);
+        return;
+    }
+
+    // Skip header
+    for (int i = 1; i < lines.Length; i++)
+    {
+        if (string.IsNullOrWhiteSpace(lines[i])) continue;
+
+        try
+        {
+            // RestaurantId,ItemName,ItemDesc,ItemPrice
+            string[] data = lines[i].Split(',');
+
+            if (data.Length < 4) continue;
+
+            string restaurantId = data[0].Trim();
+            string itemName = data[1].Trim();
+            string itemDesc = data[2].Trim();
+
+            double itemPrice = 0;
+            double.TryParse(data[3].Trim(), out itemPrice);
+
+            Restaurant restaurant = FindRestaurantById(restaurantList, restaurantId);
+
+            if (restaurant != null)
+            {
+                FoodItem foodItem = new FoodItem(itemName, itemDesc, itemPrice, "");
+
+                // Add to the first menu created in LoadRestaurantsFromFile
+                if (restaurant.menuList.Count > 0)
+                {
+                    restaurant.menuList[0].AddFoodItem(foodItem);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error parsing line " + (i + 1) + " in fooditems.csv: " + ex.Message);
+        }
+    }
+}
+
+static Restaurant FindRestaurantById(List<Restaurant> restaurantList, string restaurantId)
+{
+    for (int i = 0; i < restaurantList.Count; i++)
+    {
+        if (restaurantList[i].RestaurantId == restaurantId)
+        {
+            return restaurantList[i];
+        }
+    }
+    return null;
+}
+
+
+
+
+
 
 //Jayson - feature 2
 void LoadCustomersFromFile(List<Customer> customerList)
