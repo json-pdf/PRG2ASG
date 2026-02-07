@@ -14,7 +14,7 @@
     <None Update="fooditems.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="orders - Copy.csv">
+    <None Update="orders.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="restaurants.csv">

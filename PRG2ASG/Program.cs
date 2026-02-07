@@ -1,5 +1,6 @@
 
 using PRG2ASG;
+using System.Runtime.CompilerServices;
 
 //Javier - feature 1
 static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
@@ -157,7 +158,7 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
 {
     try
     {
-        string[] lines = File.ReadAllLines("orders_-_Copy.csv");  
+        string[] lines = File.ReadAllLines("orders.csv");  
 
         for (int i = 1; i < lines.Length; i++)
         {
@@ -241,7 +242,7 @@ void LoadOrdersFromFile(List<Order> orderList, List<Customer> customerList, List
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error reading orders_-_Copy.csv: {ex.Message}");
+        Console.WriteLine($"Error reading orders.csv: {ex.Message}");
     }
 }
 
@@ -310,8 +311,8 @@ while (exit == false)
 
     if (choice == "1")
     {
-       
-       
+       menu();
+
     }
     else if (choice == "2")
     {
@@ -340,5 +341,22 @@ while (exit == false)
     else
     {
        
+    }
+}
+
+
+// Jayson - feature 3
+void menu()
+{
+    Console.WriteLine("All Restaurants and Menu Items:");
+    Console.WriteLine("==============================");
+    foreach (Restaurant r in restaurantList)
+    {
+        Console.WriteLine($"Restaurant: {r.RestaurantName} ({r.RestaurantId})");
+        foreach (Menu m in r.menuList)
+        {
+            m.DisplayFoodItems();
+        }
+        Console.WriteLine();
     }
 }

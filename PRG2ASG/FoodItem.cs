@@ -32,7 +32,7 @@ namespace PRG2ASG
 
         public override string ToString()
         {
-            return "Name:" + ItemName + " Description:" + ItemDesc + " Price:" + ItemPrice + " Customise:" + Customise;
+            return "  - " + ItemName +": " + ItemDesc + " - $" + ItemPrice + " Customise:" + Customise;
 
         }
     }
