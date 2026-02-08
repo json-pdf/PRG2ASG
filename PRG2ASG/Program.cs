@@ -1,5 +1,6 @@
 
 using PRG2ASG;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 
 //Javier - feature 1
@@ -320,7 +321,7 @@ while (exit == false)
     }
     else if (choice == "3")
     {
-        
+        neworder();
     }
     else if (choice == "4")
     {
@@ -360,3 +361,200 @@ void menu()
         Console.WriteLine();
     }
 }
+
+//Jayson - feature 5
+
+        void neworder()
+        {
+            Console.WriteLine("\nCreate a New Order");
+            Console.WriteLine("===================");
+            Console.Write("Enter Customer Email:");
+            string email = Console.ReadLine();
+
+            Console.Write("Enter Restaurant ID: ");
+            string restaurantId = Console.ReadLine();
+
+            Console.Write("Enter Delivery Date (dd/mm/yyyy): ");
+            string inputdate = Console.ReadLine();
+
+            DateTime deliverydate = DateTime.ParseExact(inputdate, "dd/MM/yyyy", null);
+
+            Console.Write("Enter Delivery Time (hh:mm): ");
+            string inputtime = Console.ReadLine();
+            TimeSpan deliverytime = TimeSpan.Parse(inputtime);
+            DateTime deliverydatetime = deliverydate.Date + deliverytime;
+
+            Console.Write("Enter Delivery Address: ");
+            string address = Console.ReadLine();
+    
+    Customer customer = customerList.Find(c => c.EmailAddress == email);
+        if (customer == null)
+        {
+            Console.WriteLine("Customer not found. Creating new customer account...");
+            Console.Write("Enter Customer Name: ");
+            string customerName = Console.ReadLine();
+
+            customer = new Customer(email, customerName);
+            customerList.Add(customer);
+
+            // Append new customer to customers.csv
+            try
+            {
+                string customerLine = customerName + "," + email;
+                File.AppendAllText("customers.csv", "\n" + customerLine);
+                Console.WriteLine("New customer created successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error saving customer to file: " + ex.Message);
+            }
+        }
+
+
+
+    Restaurant restaurant = restaurantList.Find(r => r.RestaurantId == restaurantId);
+            if (restaurant == null)
+            {
+        Console.WriteLine("Restaurant not found.");
+                    return;
+            }
+
+            Order order = new Order(customer, restaurant);
+            order.DeliveryDateTime = deliverydatetime;
+            order.DeliveryAddress = address;
+
+            Console.WriteLine("\nAvailable Food Items:");
+            List<FoodItem> availableItems = new List<FoodItem>();
+            int itemnumber = 1;
+
+            foreach (Menu m in restaurant.menuList)
+            {
+                foreach (FoodItem f in m.GetFoodList())
+                {
+                    Console.WriteLine($"{itemnumber}. {f.ItemName} - ${f.ItemPrice}");
+                    availableItems.Add(f);
+                    itemnumber++;
+                }
+            }
+
+            while (true)
+            {
+                Console.Write("Enter item number (0 to finish): ");
+                int itemchoice = Convert.ToInt32(Console.ReadLine());
+
+
+                if (itemchoice == 0)
+                {
+                    break;
+                }
+                if (itemchoice > 0 && itemchoice <= availableItems.Count)
+                {
+                    FoodItem foodItem = availableItems[itemchoice - 1];
+                    Console.Write("Enter quantity: ");
+                    int qty = Convert.ToInt32(Console.ReadLine());
+                    OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
+                        foodItem.ItemName,
+                        foodItem.ItemDesc,
+                        foodItem.ItemPrice,
+                        foodItem.Customise,
+                        qty,
+                        0);
+                    order.AddOrderedFoodItem(orderedFoodItem);
+
+                }
+                else
+                {
+                    Console.WriteLine("Invalid item number. Please try again.");
+                }
+            }
+            Console.Write("Add special request? [Y/N]: ");
+            string reqans = Console.ReadLine();
+
+            if (reqans.ToUpper() == "Y")
+            {
+                Console.Write("Enter special request: ");
+                string sreq = Console.ReadLine();
+
+                if (order.orderedItems.Count > 0)
+                {
+                    order.orderedItems[0].Customise = sreq;
+                }
+            }
+            double orderTotal = order.CalculateOrderTotal();
+            double subtotal = orderTotal - 5.00;
+            Console.WriteLine($"\nOrder Total: ${subtotal:F2} + $5.00 (delivery) = ${orderTotal:F2}");
+
+            Console.Write("Proceed to payment? [Y/N]: ");
+            string propay = Console.ReadLine();
+
+            if(propay.ToUpper() == "N")
+            {
+                Console.WriteLine("Order cancelled.");
+                return;
+
+            }
+
+            Console.WriteLine("Payment method: ");
+            Console.Write("[CC] Credit Card / [PP] PayPal / [CD] Cash on Delivery: ");
+            String paymentmethod = Console.ReadLine().ToUpper();
+
+            if (paymentmethod == "CC")
+            {
+                order.OrderPaymentMethod = "Credit Card";
+            }
+            else if (paymentmethod == "PP")
+            {
+                order.OrderPaymentMethod = "PayPal";
+            }
+            else if (paymentmethod == "CD")
+            {
+                order.OrderPaymentMethod = "Cash on Delivery";
+            }
+
+            order.OrderPaid = true;
+            order.OrderStatus = "Pending";
+
+            int maxOrderId = 1000;
+            foreach (Order o in orderList)
+            {
+                if (o.OrderID > maxOrderId)
+                {
+                    maxOrderId = o.OrderID;
+                }
+            }
+            order.OrderID = maxOrderId + 1;
+
+            orderList.Add(order);
+            customer.AddOrder(order);
+            restaurant.orderQueue.Enqueue(order);
+            try
+{
+    string items = "";
+    for (int i = 0; i < order.orderedItems.Count; i++)
+    {
+        if (i > 0) items += "|";
+        items += order.orderedItems[i].ItemName + "," + order.orderedItems[i].QtyOrdered;
+    }
+    
+    string line = order.OrderID + "," + 
+                  customer.EmailAddress + "," + 
+                  restaurant.RestaurantId + "," + 
+                  order.DeliveryDateTime.ToString("dd/MM/yyyy") + "," + 
+                  order.DeliveryDateTime.ToString("HH:mm") + "," + 
+                  order.DeliveryAddress + "," + 
+                  order.OrderDateTime.ToString("dd/MM/yyyy HH:mm") + "," + 
+                  order.OrderTotal + "," + 
+                  order.OrderStatus + "," + 
+                  "\"" + items + "\"";
+    
+    File.AppendAllText("orders_-_Copy.csv", "\n" + line);
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Error saving: " + ex.Message);
+}
+
+            Console.WriteLine($"\nOrder {order.OrderID} created successfully! Status: {order.OrderStatus}");
+        }
+
+               
