@@ -329,7 +329,7 @@ while (exit == false)
     }
     else if (choice == "5")
     {
-       
+        Modifyorder();
     }
     else if (choice == "6")
     {
@@ -337,7 +337,8 @@ while (exit == false)
     }
     else if (choice == "0")
     {
-       
+        Console.WriteLine("Thank you for using Gruberoo!!");
+        break;
     }
     else
     {
@@ -557,4 +558,154 @@ catch (Exception ex)
             Console.WriteLine($"\nOrder {order.OrderID} created successfully! Status: {order.OrderStatus}");
         }
 
-               
+
+// Jayson - feature 7
+
+void Modifyorder()
+{
+    Console.WriteLine("Modify Order");
+    Console.WriteLine("============");
+    Console.Write("Enter Customer Email: ");
+    string email = Console.ReadLine();
+
+    Customer customer = customerList.Find(c => c.EmailAddress == email);
+    if (customer == null)
+    {
+        Console.WriteLine("Customer does not exist.");
+        return;
+    }
+
+        foreach (Order o in customer.OrderList)
+        {
+        if (o.OrderStatus == "Pending")
+        {
+            Console.WriteLine(o.OrderID);
+        }
+        else if (o.OrderStatus != "Pending")
+        {
+            Console.WriteLine($"Order:{o.OrderID} --> {o.OrderStatus}");
+        }
+        }
+    Console.Write("Enter Order ID: ");
+    int orderID = Convert.ToInt32(Console.ReadLine());
+    Order order = customer.OrderList.Find(o => o.OrderID == orderID);
+    if (order == null)
+    {
+        Console.WriteLine("Order does not exist.");
+        return;
+    }
+    if (order.OrderStatus != "Pending")
+    {
+        Console.WriteLine($"Your order has been {order.OrderStatus} \nHave a nice day!");
+        return;
+    }
+    if (order.OrderStatus == "Pending")
+    {
+        Console.WriteLine("Order Items:");
+        foreach (var item in order.orderedItems)
+        {
+            Console.WriteLine($"{item.QtyOrdered}. {item.ItemName}");
+        }
+        Console.WriteLine("Address:");
+        Console.WriteLine(order.DeliveryAddress);
+        Console.WriteLine("Delivery Date/Time:");
+        Console.WriteLine(order.DeliveryDateTime);
+        Console.Write("\nModify: [1] Items [2] Address [3] Delivery Time: ");
+        int modoption = Convert.ToInt32(Console.ReadLine());
+        if (modoption == 1)
+        {
+            Console.WriteLine("Enter changes to items [[E]dit quantity/[A]dd items]: ");
+            string itemmod = Console.ReadLine();
+
+            if (itemmod.ToUpper() == "E")
+            {
+                Console.WriteLine("Current items: ");
+                for (int i = 0; i < order.orderedItems.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}.{order.orderedItems[i].ItemName} - {order.orderedItems[i].QtyOrdered}");
+                }
+
+                Console.Write("Emter item number to edit: ");
+                int remove = Convert.ToInt32(Console.ReadLine());
+                if (remove > 0 && remove <= order.orderedItems.Count)
+                {
+                    OrderedFoodItem item = order.orderedItems[remove - 1];
+                    Console.Write($"Current quantity: {item.QtyOrdered} how many would you like to remove or add? (0 to remove all): ");
+                    int modqty = Convert.ToInt32(Console.ReadLine());
+                    if (modqty == 0)
+                    {
+                        order.RemoveOrderedFoodItem(item);
+                        Console.WriteLine($"Order {orderID} updated. {item.ItemName} has been removed.");
+                    }
+                    if (modqty > 0)
+                    {
+                        item.QtyOrdered = modqty;
+                        item.CalculateSubtotal();
+                        Console.WriteLine($"Order {orderID} updated. {item.ItemName} quantity has been updated.");
+                    }
+                }
+            }
+
+            if (itemmod.ToUpper() == "A")
+            {
+                Console.WriteLine("Available Food items:");
+                List<FoodItem> availableItems = new List<FoodItem>();
+                int itemnumber = 1;
+                foreach (Menu m in order.Restaurant.menuList)
+                {
+                    foreach (FoodItem f in m.GetFoodList())
+                    {
+                        Console.WriteLine($"{itemnumber}. {f.ItemName} - ${f.ItemPrice}");
+                        availableItems.Add(f);
+                        itemnumber++;
+                    }
+                }
+                Console.Write("Enter item number to add: ");
+                int choice = Convert.ToInt32(Console.ReadLine());
+                if (choice > 0 && choice <= availableItems.Count)
+                {
+                    FoodItem foodItem = availableItems[choice - 1];
+                    Console.Write("Enter quantity: ");
+                    int qty = Convert.ToInt32(Console.ReadLine());
+                    OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
+                        foodItem.ItemName,
+                        foodItem.ItemDesc,
+                        foodItem.ItemPrice,
+                        foodItem.Customise,
+                        qty,
+                        0);
+                    order.AddOrderedFoodItem(orderedFoodItem);
+                    Console.WriteLine($"Order {orderID} updated. {qty} of {foodItem.ItemName} has been added.");
+                }
+
+
+            }
+            order.CalculateOrderTotal();
+            Console.WriteLine($"Updated Order Total: ${order.OrderTotal:F2}");
+        }
+        else if (modoption == 2)
+        {
+            Console.Write("Enter new Delivery Address: ");
+            string newaddress = Console.ReadLine();
+            order.DeliveryAddress = newaddress;
+            Console.WriteLine($"Order {orderID} updated.\nNew Address: {newaddress}");
+        }
+
+
+        else if (modoption == 3)
+        {
+            Console.Write("Enter new Delivery Time (hh:mm): ");
+            string newtime = Console.ReadLine();
+            TimeSpan time = TimeSpan.Parse(newtime);
+            order.DeliveryDateTime = order.DeliveryDateTime.Date + time;
+            Console.WriteLine($"Order {orderID} updated. New Delivery Time: {time}");
+        }
+
+
+
+    }
+
+        }
+
+    
+
