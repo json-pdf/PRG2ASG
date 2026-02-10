@@ -3,11 +3,10 @@ using PRG2ASG;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 
-//Javier - feature 1
-
 // Bonus Feature (Favourite Orders) storage - Javier
 Dictionary<string, List<string>> favouriteDict = new Dictionary<string, List<string>>();
 
+//Javier - feature 1
 static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
 {
     string[] lines;
