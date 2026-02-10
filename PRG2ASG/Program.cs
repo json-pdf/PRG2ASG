@@ -305,6 +305,8 @@ while (exit == false)
     Console.WriteLine("4. Process an order");
     Console.WriteLine("5. Modify an existing order");
     Console.WriteLine("6. Delete an existing order");
+    Console.WriteLine("7. Bulk process Pending orders (Today)");
+    Console.WriteLine("8. Display total order amount");
     Console.WriteLine("0. Exit");
     Console.Write("Enter your choice: ");
 
@@ -334,7 +336,14 @@ while (exit == false)
     else if (choice == "6")
     {
         DeleteOrder();
-        
+    }
+    else if (choice == "7")
+    {
+        BulkProcessPendingOrdersToday();
+    }
+    else if (choice == "8")
+    {
+        DisplayTotalOrderAmount();
     }
     else if (choice == "0")
     {
@@ -1026,5 +1035,166 @@ void DeleteOrder()
 
     Console.WriteLine("Order " + order.OrderID + " cancelled. Refund of $" +
                       order.OrderTotal.ToString("0.00") + " processed.");
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//Advance Feature (a) - Javier
+
+void BulkProcessPendingOrdersToday()
+{
+    Console.WriteLine("\nBulk Processing of Pending Orders (Today)");
+    Console.WriteLine("=========================================");
+
+    DateTime today = DateTime.Today;
+    int totalPending = 0;
+
+    Console.WriteLine("\nPending Orders:");
+
+    for (int i = 0; i < restaurantList.Count; i++)
+    {
+        Restaurant r = restaurantList[i];
+        bool printedRestaurant = false;
+
+        foreach (Order o in r.orderQueue)
+        {
+            if (o.OrderStatus == "Pending" &&
+                o.DeliveryDateTime.Date == today)
+            {
+                if (!printedRestaurant)
+                {
+                    Console.WriteLine("\nRestaurant: " + r.RestaurantName +
+                                      " (" + r.RestaurantId + ")");
+                    printedRestaurant = true;
+                }
+
+                Console.WriteLine("Order ID: " + o.OrderID +
+                                  " | Delivery: " +
+                                  o.DeliveryDateTime.ToString("HH:mm"));
+
+                totalPending++;
+            }
+        }
+    }
+
+    Console.WriteLine("\nTotal Pending orders today: " + totalPending);
+
+    if (totalPending == 0)
+    {
+        Console.WriteLine("No Pending orders to process.");
+        return;
+    }
+
+    int processedCount = 0;
+    int preparingCount = 0;
+    int rejectedCount = 0;
+
+    for (int i = 0; i < restaurantList.Count; i++)
+    {
+        Restaurant r = restaurantList[i];
+        int queueSize = r.orderQueue.Count;
+
+        for (int j = 0; j < queueSize; j++)
+        {
+            Order o = r.orderQueue.Dequeue();
+
+            if (o.OrderStatus == "Pending" &&
+                o.DeliveryDateTime.Date == today)
+            {
+                TimeSpan timeLeft = o.DeliveryDateTime - DateTime.Now;
+
+                if (timeLeft.TotalMinutes < 60)
+                {
+                    o.OrderStatus = "Rejected";
+                    rejectedCount++;
+                }
+                else
+                {
+                    o.OrderStatus = "Preparing";
+                    preparingCount++;
+                }
+
+                processedCount++;
+            }
+
+            r.orderQueue.Enqueue(o);
+        }
+    }
+
+    double percentage = (processedCount * 100.0) / totalPending;
+
+    Console.WriteLine("\nSummary");
+    Console.WriteLine("-------");
+    Console.WriteLine("Orders processed: " + processedCount);
+    Console.WriteLine("Preparing orders: " + preparingCount);
+    Console.WriteLine("Rejected orders: " + rejectedCount);
+    Console.WriteLine("Percentage auto processed: " +
+                      percentage.ToString("0.00") + "%");
+}
+
+
+//Advance Feature (b) - Jayson
+
+
+
+void DisplayTotalOrderAmount()
+{
+    Console.WriteLine("\nDisplay Total Order Amount");
+    Console.WriteLine("==========================");
+
+    double deliveryFee = 5.00;
+
+    double grandTotalSales = 0;   // money earned from Delivered (less delivery fee per order)
+    double grandTotalRefunds = 0; // money refunded from Cancelled/Rejected
+
+    for (int i = 0; i < restaurantList.Count; i++)
+    {
+        Restaurant r = restaurantList[i];
+
+        double restaurantSales = 0;
+        double restaurantRefunds = 0;
+
+        int deliveredCount = 0;
+
+        // Go through every order in the restaurant queue
+        foreach (Order o in r.orderQueue)
+        {
+            // Successful orders
+            if (o.OrderStatus == "Delivered")
+            {
+                deliveredCount++;
+
+                // less delivery fee per order
+                double net = o.OrderTotal - deliveryFee;
+                if (net < 0) net = 0;
+
+                restaurantSales += net;
+            }
+            // Refunded orders
+            else if (o.OrderStatus == "Cancelled" || o.OrderStatus == "Rejected")
+            {
+                restaurantRefunds += o.OrderTotal;
+            }
+        }
+
+        grandTotalSales += restaurantSales;
+        grandTotalRefunds += restaurantRefunds;
+
+        Console.WriteLine("\nRestaurant: " + r.RestaurantName + " (" + r.RestaurantId + ")");
+        Console.WriteLine("Total Delivered Orders (less $5 delivery fee each): $" + restaurantSales.ToString("0.00"));
+        Console.WriteLine("Total Refunds (Cancelled/Rejected): $" + restaurantRefunds.ToString("0.00"));
+    }
+
+    double finalEarnings = grandTotalSales - grandTotalRefunds;
+
+    Console.WriteLine("\nOverall Summary");
+    Console.WriteLine("--------------");
+    Console.WriteLine("Total Order Amount: $" + grandTotalSales.ToString("0.00"));
+    Console.WriteLine("Total Refunds: $" + grandTotalRefunds.ToString("0.00"));
+    Console.WriteLine("Final Amount Gruberoo Earns: $" + finalEarnings.ToString("0.00"));
 }
 
