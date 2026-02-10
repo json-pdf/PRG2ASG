@@ -65,7 +65,7 @@ namespace PRG2ASG
         {
             for (int i = 0; i < foodList.Count; i++)
             {
-                Console.WriteLine(foodList[i]);
+                Console.WriteLine($"  - {foodList[i].ItemName}: {foodList[i].ItemDesc} - ${foodList[i].ItemPrice:F2}");
             }
         }
 

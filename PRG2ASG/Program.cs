@@ -973,7 +973,7 @@ void ProcessOrder()
 
 void Modifyorder()
 {
-    Console.WriteLine("Modify Order");
+    Console.WriteLine("\nModify Order");
     Console.WriteLine("============");
 
     // Validation for Customer Email
@@ -1273,13 +1273,6 @@ void Modifyorder()
             {
                 TimeSpan time = TimeSpan.Parse(newtime);
                 DateTime newDeliveryDateTime = order.DeliveryDateTime.Date + time;
-
-                if (newDeliveryDateTime <= DateTime.Now)
-                {
-                    Console.WriteLine("Error: Delivery time must be in the future.");
-                    continue;
-                }
-
                 order.DeliveryDateTime = newDeliveryDateTime;
                 Console.WriteLine($"Order {order.OrderID} updated. New Delivery Time: {time}");
                 break;
@@ -2005,7 +1998,7 @@ void CreateOrderFromFavourite()
     order.OrderStatus = "Pending";
     order.OrderPaid = true;
     order.OrderPaymentMethod = "Favourite Reorder";
-
+    
     orderList.Add(order);
     customer.AddOrder(order);
     restaurant.orderQueue.Enqueue(order);
