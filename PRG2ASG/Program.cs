@@ -334,6 +334,7 @@ while (exit == false)
     else if (choice == "6")
     {
         DeleteOrder();
+        
     }
     else if (choice == "0")
     {
@@ -760,127 +761,135 @@ void Modifyorder()
         return;
     }
 
-        foreach (Order o in customer.OrderList)
+    //only pending orders using a loop
+    List<Order> pendingOrders = new List<Order>();
+    for (int i = 0; i < customer.OrderList.Count; i++)
+    {
+        if (customer.OrderList[i].OrderStatus == "Pending")
         {
-        if (o.OrderStatus == "Pending")
-        {
-            Console.WriteLine(o.OrderID);
+            pendingOrders.Add(customer.OrderList[i]);
         }
-        else if (o.OrderStatus != "Pending")
-        {
-            Console.WriteLine($"Order:{o.OrderID} --> {o.OrderStatus}");
-        }
-        }
+    }
+
+    if (pendingOrders.Count == 0)
+    {
+        Console.WriteLine("No pending orders.");
+        return;
+    }
+
+    Console.WriteLine("Pending Orders:");
+    for (int i = 0; i < pendingOrders.Count; i++)
+    {
+        Console.WriteLine(pendingOrders[i].OrderID);
+    }
+
     Console.Write("Enter Order ID: ");
     int orderID = Convert.ToInt32(Console.ReadLine());
-    Order order = customer.OrderList.Find(o => o.OrderID == orderID);
+
+    Order order = null;
+    for (int i = 0; i < pendingOrders.Count; i++)
+    {
+        if (pendingOrders[i].OrderID == orderID)
+        {
+            order = pendingOrders[i];
+            break;
+        }
+    }
+
     if (order == null)
     {
-        Console.WriteLine("Order does not exist.");
+        Console.WriteLine("Order does not exist or is not pending.");
         return;
     }
-    if (order.OrderStatus != "Pending")
+
+   
+    Console.WriteLine("Order Items:");
+    foreach (var item in order.orderedItems)
     {
-        Console.WriteLine($"Your order has been {order.OrderStatus} \nHave a nice day!");
-        return;
+        Console.WriteLine($"{item.QtyOrdered}. {item.ItemName}");
     }
-    if (order.OrderStatus == "Pending")
+    Console.WriteLine("Address:");
+    Console.WriteLine(order.DeliveryAddress);
+    Console.WriteLine("Delivery Date/Time:");
+    Console.WriteLine(order.DeliveryDateTime);
+    Console.Write("\nModify: [1] Items [2] Address [3] Delivery Time: ");
+    int modoption = Convert.ToInt32(Console.ReadLine());
+
+    if (modoption == 1)
     {
-        Console.WriteLine("Order Items:");
-        foreach (var item in order.orderedItems)
-        {
-            Console.WriteLine($"{item.QtyOrdered}. {item.ItemName}");
-        }
-        Console.WriteLine("Address:");
-        Console.WriteLine(order.DeliveryAddress);
-        Console.WriteLine("Delivery Date/Time:");
-        Console.WriteLine(order.DeliveryDateTime);
-        Console.Write("\nModify: [1] Items [2] Address [3] Delivery Time: ");
-        int modoption = Convert.ToInt32(Console.ReadLine());
-        if (modoption == 1)
-        {
-            Console.WriteLine("Enter changes to items [R]emove/[A]dd items]: ");
-            string itemmod = Console.ReadLine();
+        Console.WriteLine("Enter changes to items [R]emove/[A]dd items]: ");
+        string itemmod = Console.ReadLine();
 
-            if (itemmod.ToUpper() == "R")
+        if (itemmod.ToUpper() == "R")
+        {
+            Console.WriteLine("Current items: ");
+            for (int i = 0; i < order.orderedItems.Count; i++)
             {
-                Console.WriteLine("Current items: ");
-                for (int i = 0; i < order.orderedItems.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}.{order.orderedItems[i].ItemName} - {order.orderedItems[i].QtyOrdered}");
-                }
-
-                Console.Write("Enter item number to remove: ");
-                int remove = Convert.ToInt32(Console.ReadLine());
-                if (remove > 0 && remove <= order.orderedItems.Count)
-                {
-                    OrderedFoodItem item = order.orderedItems[remove - 1];
-                    string itemName = item.ItemName;
-                    order.RemoveOrderedFoodItem(item);
-                    Console.WriteLine($"Order {orderID} updated. {itemName} has been removed.");
-                }
+                Console.WriteLine($"{i + 1}.{order.orderedItems[i].ItemName} - {order.orderedItems[i].QtyOrdered}");
             }
 
-            if (itemmod.ToUpper() == "A")
+            Console.Write("Enter item number to remove: ");
+            int remove = Convert.ToInt32(Console.ReadLine());
+            if (remove > 0 && remove <= order.orderedItems.Count)
             {
-                Console.WriteLine("Available Food items:");
-                List<FoodItem> availableItems = new List<FoodItem>();
-                int itemnumber = 1;
-                foreach (Menu m in order.Restaurant.menuList)
-                {
-                    foreach (FoodItem f in m.GetFoodList())
-                    {
-                        Console.WriteLine($"{itemnumber}. {f.ItemName} - ${f.ItemPrice}");
-                        availableItems.Add(f);
-                        itemnumber++;
-                    }
-                }
-                Console.Write("Enter item number to add: ");
-                int choice = Convert.ToInt32(Console.ReadLine());
-                if (choice > 0 && choice <= availableItems.Count)
-                {
-                    FoodItem foodItem = availableItems[choice - 1];
-                    Console.Write("Enter quantity: ");
-                    int qty = Convert.ToInt32(Console.ReadLine());
-                    OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
-                        foodItem.ItemName,
-                        foodItem.ItemDesc,
-                        foodItem.ItemPrice,
-                        foodItem.Customise,
-                        qty,
-                        0);
-                    order.AddOrderedFoodItem(orderedFoodItem);
-                    Console.WriteLine($"Order {orderID} updated. {qty} of {foodItem.ItemName} has been added.");
-                }
-
-
+                OrderedFoodItem item = order.orderedItems[remove - 1];
+                string itemName = item.ItemName;
+                order.RemoveOrderedFoodItem(item);
+                Console.WriteLine($"Order {orderID} updated. {itemName} has been removed.");
             }
-            order.CalculateOrderTotal();
-            Console.WriteLine($"Updated Order Total: ${order.OrderTotal:F2}");
         }
-        else if (modoption == 2)
+
+        if (itemmod.ToUpper() == "A")
         {
-            Console.Write("Enter new Delivery Address: ");
-            string newaddress = Console.ReadLine();
-            order.DeliveryAddress = newaddress;
-            Console.WriteLine($"Order {orderID} updated.\nNew Address: {newaddress}");
+            Console.WriteLine("Available Food items:");
+            List<FoodItem> availableItems = new List<FoodItem>();
+            int itemnumber = 1;
+            foreach (Menu m in order.Restaurant.menuList)
+            {
+                foreach (FoodItem f in m.GetFoodList())
+                {
+                    Console.WriteLine($"{itemnumber}. {f.ItemName} - ${f.ItemPrice}");
+                    availableItems.Add(f);
+                    itemnumber++;
+                }
+            }
+            Console.Write("Enter item number to add: ");
+            int choice = Convert.ToInt32(Console.ReadLine());
+            if (choice > 0 && choice <= availableItems.Count)
+            {
+                FoodItem foodItem = availableItems[choice - 1];
+                Console.Write("Enter quantity: ");
+                int qty = Convert.ToInt32(Console.ReadLine());
+                OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
+                    foodItem.ItemName,
+                    foodItem.ItemDesc,
+                    foodItem.ItemPrice,
+                    foodItem.Customise,
+                    qty,
+                    0);
+                order.AddOrderedFoodItem(orderedFoodItem);
+                Console.WriteLine($"Order {orderID} updated. {qty} of {foodItem.ItemName} has been added.");
+            }
         }
-
-
-        else if (modoption == 3)
-        {
-            Console.Write("Enter new Delivery Time (hh:mm): ");
-            string newtime = Console.ReadLine();
-            TimeSpan time = TimeSpan.Parse(newtime);
-            order.DeliveryDateTime = order.DeliveryDateTime.Date + time;
-            Console.WriteLine($"Order {orderID} updated. New Delivery Time: {time}");
-        }
-
-
-
+        order.CalculateOrderTotal();
+        Console.WriteLine($"Updated Order Total: ${order.OrderTotal:F2}");
     }
-
-        }
+    else if (modoption == 2)
+    {
+        Console.Write("Enter new Delivery Address: ");
+        string newaddress = Console.ReadLine();
+        order.DeliveryAddress = newaddress;
+        Console.WriteLine($"Order {orderID} updated.\nNew Address: {newaddress}");
+    }
+    else if (modoption == 3)
+    {
+        Console.Write("Enter new Delivery Time (hh:mm): ");
+        string newtime = Console.ReadLine();
+        TimeSpan time = TimeSpan.Parse(newtime);
+        order.DeliveryDateTime = order.DeliveryDateTime.Date + time;
+        Console.WriteLine($"Order {orderID} updated. New Delivery Time: {time}");
+    }
+}
 
 //Javier - feature 8
 
@@ -1019,4 +1028,3 @@ void DeleteOrder()
                       order.OrderTotal.ToString("0.00") + " processed.");
 }
 
-    
