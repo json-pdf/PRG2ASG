@@ -4,6 +4,10 @@ using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 
 //Javier - feature 1
+
+// Bonus Feature (Favourite Orders) storage - Javier
+Dictionary<string, List<string>> favouriteDict = new Dictionary<string, List<string>>();
+
 static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
 {
     string[] lines;
@@ -299,15 +303,17 @@ bool exit = false;
 while (exit == false)
 {
     Console.WriteLine("\n===== Gruberoo Food Delivery System =====");
-    Console.WriteLine("1. List all restaurants and menu items");
-    Console.WriteLine("2. List all orders");
-    Console.WriteLine("3. Create a new order");
-    Console.WriteLine("4. Process an order");
-    Console.WriteLine("5. Modify an existing order");
-    Console.WriteLine("6. Delete an existing order");
-    Console.WriteLine("7. Bulk process Pending orders (Today)");
-    Console.WriteLine("8. Display total order amount");
-    Console.WriteLine("0. Exit");
+    Console.WriteLine("1.  List all restaurants and menu items");
+    Console.WriteLine("2.  List all orders");
+    Console.WriteLine("3.  Create a new order");
+    Console.WriteLine("4.  Process an order");
+    Console.WriteLine("5.  Modify an existing order");
+    Console.WriteLine("6.  Delete an existing order");
+    Console.WriteLine("7.  Bulk process Pending orders (Today)");
+    Console.WriteLine("8.  Display total order amount");
+    Console.WriteLine("9.  Save an order as Favourite");
+    Console.WriteLine("10. Reorder from Favourite");
+    Console.WriteLine("0.  Exit");
     Console.Write("Enter your choice: ");
 
     string choice = Console.ReadLine();
@@ -344,6 +350,14 @@ while (exit == false)
     else if (choice == "8")
     {
         DisplayTotalOrderAmount();
+    }
+        else if (choice == "9")
+    {
+        AddFavouriteOrder();
+    }
+    else if (choice == "10")
+    {
+        CreateOrderFromFavourite();
     }
     else if (choice == "0")
     {
@@ -1576,3 +1590,425 @@ void DisplayTotalOrderAmount()
     Console.WriteLine("Final Amount Gruberoo Earns: $" + finalEarnings.ToString("0.00"));
 }
 
+
+
+
+// Advance Featuere (Favourite Orders) - Javier
+
+void LoadFavouritesFromFile()
+{
+    favouriteDict.Clear();
+
+    if (!File.Exists("favourites.csv"))
+        return;
+
+    string[] lines;
+
+    try
+    {
+        lines = File.ReadAllLines("favourites.csv");
+    }
+    catch
+    {
+        Console.WriteLine("Error reading favourites.csv");
+        return;
+    }
+
+    for (int i = 0; i < lines.Length; i++)
+    {
+        if (string.IsNullOrWhiteSpace(lines[i])) continue;
+
+        try
+        {
+            // email,restaurantId,"item1,qty|item2,qty"
+            string[] data = lines[i].Split(',', 3);
+            if (data.Length < 3) continue;
+
+            string email = data[0].Trim();
+            string restId = data[1].Trim();
+            string items = data[2].Trim().Trim('"');
+
+            if (string.IsNullOrWhiteSpace(email)) continue;
+            if (string.IsNullOrWhiteSpace(restId)) continue;
+            if (string.IsNullOrWhiteSpace(items)) continue;
+
+            string template = restId + "|" + items;
+
+            if (!favouriteDict.ContainsKey(email))
+            {
+                favouriteDict[email] = new List<string>();
+            }
+
+            // avoid duplicate templates
+            bool exists = false;
+            for (int j = 0; j < favouriteDict[email].Count; j++)
+            {
+                if (favouriteDict[email][j] == template)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists)
+            {
+                favouriteDict[email].Add(template);
+            }
+        }
+        catch
+        {
+            // ignore bad lines, continue loading
+        }
+    }
+}
+
+void SaveFavouriteToFile(string email, string restaurantId, string items)
+{
+    try
+    {
+        string line = email + "," + restaurantId + "," + "\"" + items + "\"";
+        File.AppendAllText("favourites.csv", line + Environment.NewLine);
+    }
+    catch
+    {
+        Console.WriteLine("Error saving to favourites.csv");
+    }
+}
+
+void AddFavouriteOrder()
+{
+    Console.WriteLine("\nFavourite Orders - Save");
+    Console.WriteLine("========================");
+
+    //Get valid customer email (re-prompt)
+    Customer customer = null;
+    string email = "";
+
+    while (customer == null)
+    {
+        Console.Write("Enter Customer Email: ");
+        email = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            Console.WriteLine("Email cannot be empty.\n");
+            continue;
+        }
+
+        email = email.Trim();
+        customer = customerList.Find(c => c.EmailAddress == email);
+
+        if (customer == null)
+        {
+            Console.WriteLine("Customer not found. Please try again.\n");
+        }
+    }
+
+    if (customer.OrderList.Count == 0)
+    {
+        Console.WriteLine("No orders found for this customer.");
+        return;
+    }
+
+    Console.WriteLine("\nCustomer Orders:");
+    for (int i = 0; i < customer.OrderList.Count; i++)
+    {
+        Order o = customer.OrderList[i];
+
+        string restName = "";
+        if (o.Restaurant != null) restName = o.Restaurant.RestaurantName;
+
+        Console.WriteLine(o.OrderID + " - " + restName + " (" + o.OrderStatus + ")");
+    }
+
+    // Get valid order id (re-prompt)
+    Order order = null;
+
+    while (order == null)
+    {
+        Console.Write("Enter Order ID to save as favourite: ");
+        string input = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            Console.WriteLine("Order ID cannot be empty.\n");
+            continue;
+        }
+
+        int orderId;
+        bool ok = int.TryParse(input.Trim(), out orderId);
+
+        if (!ok)
+        {
+            Console.WriteLine("Invalid Order ID. Please enter a number.\n");
+            continue;
+        }
+
+        order = customer.OrderList.Find(o => o.OrderID == orderId);
+
+        if (order == null)
+        {
+            Console.WriteLine("Order not found. Please try again.\n");
+        }
+        else if (order.Restaurant == null)
+        {
+            Console.WriteLine("This order has no restaurant linked. Please choose another order.\n");
+            order = null;
+        }
+        else if (order.orderedItems == null || order.orderedItems.Count == 0)
+        {
+            Console.WriteLine("This order has no items. Please choose another order.\n");
+            order = null;
+        }
+    }
+
+    string items = "";
+    for (int i = 0; i < order.orderedItems.Count; i++)
+    {
+        if (i > 0) items += "|";
+        items += order.orderedItems[i].ItemName + "," + order.orderedItems[i].QtyOrdered;
+    }
+
+    string restaurantId = order.Restaurant.RestaurantId;
+    string template = restaurantId + "|" + items;
+
+    // Save in memory (avoid duplicates)
+    if (!favouriteDict.ContainsKey(email))
+        favouriteDict[email] = new List<string>();
+
+    bool exists = false;
+    for (int i = 0; i < favouriteDict[email].Count; i++)
+    {
+        if (favouriteDict[email][i] == template)
+        {
+            exists = true;
+            break;
+        }
+    }
+
+    if (exists)
+    {
+        Console.WriteLine("This favourite already exists.");
+        return;
+    }
+
+    favouriteDict[email].Add(template);
+
+    // Save to file
+    SaveFavouriteToFile(email, restaurantId, items);
+
+    Console.WriteLine("Favourite order saved!");
+}
+
+void CreateOrderFromFavourite()
+{
+    Console.WriteLine("\nFavourite Orders - Reorder");
+    Console.WriteLine("===========================");
+
+    Customer customer = null;
+    string email = "";
+
+    while (customer == null)
+    {
+        Console.Write("Enter Customer Email: ");
+        email = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            Console.WriteLine("Email cannot be empty.\n");
+            continue;
+        }
+
+        email = email.Trim();
+        customer = customerList.Find(c => c.EmailAddress == email);
+
+        if (customer == null)
+        {
+            Console.WriteLine("Customer not found. Please try again.\n");
+        }
+    }
+
+    if (!favouriteDict.ContainsKey(email) || favouriteDict[email].Count == 0)
+    {
+        Console.WriteLine("No favourite orders found.");
+        return;
+    }
+
+    Console.WriteLine("\nFavourite Orders:");
+    for (int i = 0; i < favouriteDict[email].Count; i++)
+    {
+        string template = favouriteDict[email][i];
+        string[] parts = template.Split('|', 2);
+        string restId = parts[0];
+
+        Restaurant r = restaurantList.Find(x => x.RestaurantId == restId);
+        string restName = (r != null) ? r.RestaurantName : restId;
+
+        Console.WriteLine((i + 1) + ". " + restName + " (" + restId + ")");
+    }
+
+    int choice = 0;
+    while (true)
+    {
+        Console.Write("Choose favourite number: ");
+        string input = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            Console.WriteLine("Choice cannot be empty.\n");
+            continue;
+        }
+
+        bool okChoice = int.TryParse(input.Trim(), out choice);
+
+        if (!okChoice || choice < 1 || choice > favouriteDict[email].Count)
+        {
+            Console.WriteLine("Invalid choice. Please try again.\n");
+            continue;
+        }
+
+        break;
+    }
+
+    string selected = favouriteDict[email][choice - 1];
+    string[] selectedParts = selected.Split('|', 2);
+    string restaurantId = selectedParts[0];
+    string items = selectedParts.Length > 1 ? selectedParts[1] : "";
+
+    Restaurant restaurant = restaurantList.Find(r => r.RestaurantId == restaurantId);
+    if (restaurant == null)
+    {
+        Console.WriteLine("Restaurant not found (favourite may be outdated).");
+        return;
+    }
+
+    // Delivery Date+Time validation (must be future)
+    DateTime deliveryDateTime;
+
+    while (true)
+    {
+        Console.Write("Enter Delivery Date (dd/mm/yyyy): ");
+        string inputDate = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(inputDate))
+        {
+            Console.WriteLine("Date cannot be empty.\n");
+            continue;
+        }
+
+        DateTime deliveryDate;
+        bool okDate = DateTime.TryParseExact(inputDate.Trim(), "dd/MM/yyyy", null,
+            System.Globalization.DateTimeStyles.None, out deliveryDate);
+
+        if (!okDate)
+        {
+            Console.WriteLine("Invalid date format. Please use dd/mm/yyyy.\n");
+            continue;
+        }
+
+        Console.Write("Enter Delivery Time (hh:mm): ");
+        string inputTime = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(inputTime))
+        {
+            Console.WriteLine("Time cannot be empty.\n");
+            continue;
+        }
+
+        TimeSpan deliveryTime;
+        bool okTime = TimeSpan.TryParse(inputTime.Trim(), out deliveryTime);
+
+        if (!okTime)
+        {
+            Console.WriteLine("Invalid time format. Please use hh:mm.\n");
+            continue;
+        }
+
+        deliveryDateTime = deliveryDate.Date + deliveryTime;
+
+        if (deliveryDateTime <= DateTime.Now)
+        {
+            Console.WriteLine("Delivery date/time must be in the future. Please try again.\n");
+            continue;
+        }
+
+        break;
+    }
+
+    string address = "";
+    while (true)
+    {
+        Console.Write("Enter Delivery Address: ");
+        address = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            Console.WriteLine("Address cannot be empty.\n");
+            continue;
+        }
+
+        address = address.Trim();
+        break;
+    }
+
+    // Create order 
+    Order order = new Order(customer, restaurant);
+    order.DeliveryDateTime = deliveryDateTime;
+    order.DeliveryAddress = address;
+
+    // Add items back into order
+    string[] itemPairs = items.Split('|');
+    for (int i = 0; i < itemPairs.Length; i++)
+    {
+        if (string.IsNullOrWhiteSpace(itemPairs[i])) continue;
+
+        string[] p = itemPairs[i].Split(',');
+        if (p.Length < 2) continue;
+
+        string itemName = p[0].Trim();
+
+        int qty;
+        bool okQty = int.TryParse(p[1].Trim(), out qty);
+        if (!okQty || qty <= 0) continue;
+
+        FoodItem foodItem = FindFoodItemInRestaurant(restaurant, itemName);
+        if (foodItem != null)
+        {
+            OrderedFoodItem orderedItem = new OrderedFoodItem(
+                foodItem.ItemName,
+                foodItem.ItemDesc,
+                foodItem.ItemPrice,
+                foodItem.Customise,
+                qty,
+                0
+            );
+            order.AddOrderedFoodItem(orderedItem);
+        }
+    }
+
+    if (order.orderedItems.Count == 0)
+    {
+        Console.WriteLine("No valid items found from this favourite order.");
+        return;
+    }
+
+    order.CalculateOrderTotal();
+
+    int maxOrderId = 1000;
+    for (int i = 0; i < orderList.Count; i++)
+    {
+        if (orderList[i].OrderID > maxOrderId)
+            maxOrderId = orderList[i].OrderID;
+    }
+    order.OrderID = maxOrderId + 1;
+
+    order.OrderStatus = "Pending";
+    order.OrderPaid = true;
+    order.OrderPaymentMethod = "Favourite Reorder";
+
+    orderList.Add(order);
+    customer.AddOrder(order);
+    restaurant.orderQueue.Enqueue(order);
+
+    Console.WriteLine("\nOrder " + order.OrderID + " created from favourite! Status: Pending");
+}
