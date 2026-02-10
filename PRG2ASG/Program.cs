@@ -3,11 +3,14 @@ using PRG2ASG;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 
-//Javier - feature 1
+// Javier - feature 8 refund stack
+Stack<Order> refundStack = new Stack<Order>();
 
 // Bonus Feature (Favourite Orders) storage - Javier
 Dictionary<string, List<string>> favouriteDict = new Dictionary<string, List<string>>();
 
+
+//Javier - feature 1
 static void LoadRestaurantsFromFile(List<Restaurant> restaurantList)
 {
     string[] lines;
@@ -872,8 +875,12 @@ void ProcessOrder()
         return;
     }
 
-    foreach (Order order in restaurant.orderQueue)
+    int queueSize = restaurant.orderQueue.Count;
+
+    for (int i = 0; i < queueSize; i++)
     {
+        Order order = restaurant.orderQueue.Dequeue();
+
         Console.WriteLine($"\nOrder {order.OrderID}:");
 
         string custName = "N/A";
@@ -881,24 +888,23 @@ void ProcessOrder()
         {
             custName = order.Customer.CustomerName;
         }
+
         Console.WriteLine("Customer: " + custName);
 
         Console.WriteLine("Ordered Items:");
-        for (int i = 0; i < order.orderedItems.Count; i++)
+        for (int j = 0; j < order.orderedItems.Count; j++)
         {
-            OrderedFoodItem item = order.orderedItems[i];
-            Console.WriteLine((i + 1) + ". " + item.ItemName + " - " + item.QtyOrdered);
+            OrderedFoodItem item = order.orderedItems[j];
+            Console.WriteLine((j + 1) + ". " + item.ItemName + " - " + item.QtyOrdered);
         }
 
         Console.WriteLine("Delivery date/time: " + order.DeliveryDateTime.ToString("dd/MM/yyyy HH:mm"));
         Console.WriteLine("Total Amount: $" + order.OrderTotal.ToString("0.00"));
         Console.WriteLine("Order Status: " + order.OrderStatus);
 
-
+        // Action validation
         string choice = "";
-        bool validChoice = false;
-
-        while (!validChoice)
+        while (true)
         {
             Console.Write("\n[C]onfirm / [R]eject / [S]kip / [D]eliver: ");
             choice = Console.ReadLine();
@@ -913,7 +919,7 @@ void ProcessOrder()
 
             if (choice == "C" || choice == "R" || choice == "S" || choice == "D")
             {
-                validChoice = true;
+                break;
             }
             else
             {
@@ -921,13 +927,20 @@ void ProcessOrder()
             }
         }
 
-        Console.WriteLine();
+        Console.WriteLine(); 
 
-
+        // rules
         if (choice == "S")
         {
-            Console.WriteLine("Order skipped.");
-            continue;
+            
+            if (order.OrderStatus == "Cancelled")
+            {
+                Console.WriteLine("Order skipped.");
+            }
+            else
+            {
+                Console.WriteLine("Order cannot be skipped because it is not Cancelled.");
+            }
         }
         else if (choice == "C")
         {
@@ -946,7 +959,9 @@ void ProcessOrder()
             if (order.OrderStatus == "Pending")
             {
                 order.OrderStatus = "Rejected";
-                Console.WriteLine("Order " + order.OrderID + " rejected. Refund initiated.");
+                refundStack.Push(order);
+                Console.WriteLine("Order " + order.OrderID + " rejected. Refund of $" +
+                                  order.OrderTotal.ToString("0.00") + " processed.");
             }
             else
             {
@@ -965,9 +980,11 @@ void ProcessOrder()
                 Console.WriteLine("Order cannot be delivered because it is not Preparing.");
             }
         }
+
+        //Put order back into queue (so queue still exists)
+        restaurant.orderQueue.Enqueue(order);
     }
 }
-
 
 // Jayson - feature 7
 
@@ -1292,25 +1309,41 @@ void DeleteOrder()
     Console.WriteLine("Delete Order");
     Console.WriteLine("============");
 
+    string email = "";
     Customer customer = null;
-    while (customer == null)
+
+    while (true)
     {
         Console.Write("Enter Customer Email: ");
-        string email = Console.ReadLine();
+        email = Console.ReadLine();
 
         if (string.IsNullOrWhiteSpace(email))
         {
-            Console.WriteLine("Email cannot be empty.\n");
+            Console.WriteLine("Error: Email cannot be empty.");
             continue;
         }
 
         email = email.Trim();
-        customer = customerList.Find(c => c.EmailAddress == email);
+
+        // VALID EMAIL: must contain @ and .
+        if (!email.Contains("@") || !email.Contains("."))
+        {
+            Console.WriteLine("Invalid email");
+            continue;
+        }
+
+        string emailLower = email.ToLower();
+
+        // Find customer
+        customer = customerList.Find(c => c.EmailAddress.ToLower() == emailLower);
 
         if (customer == null)
         {
-            Console.WriteLine("Customer does not exist. Please try again.\n");
+            Console.WriteLine("Error: Customer does not exist.");
+            continue;
         }
+
+        break;
     }
 
     Console.WriteLine("Pending Orders:");
@@ -1318,11 +1351,10 @@ void DeleteOrder()
 
     for (int i = 0; i < customer.OrderList.Count; i++)
     {
-        Order o = customer.OrderList[i];
-        if (o.OrderStatus == "Pending")
+        if (customer.OrderList[i].OrderStatus == "Pending")
         {
-            Console.WriteLine(o.OrderID);
-            pendingOrders.Add(o);
+            Console.WriteLine(customer.OrderList[i].OrderID);
+            pendingOrders.Add(customer.OrderList[i]);
         }
     }
 
@@ -1333,39 +1365,33 @@ void DeleteOrder()
     }
 
     Order order = null;
-
-    while (order == null)
+    while (true)
     {
         Console.Write("Enter Order ID: ");
-        string input = Console.ReadLine();
-
-        if (string.IsNullOrWhiteSpace(input))
+        try
         {
-            Console.WriteLine("Order ID cannot be empty.\n");
-            continue;
-        }
+            int orderID = Convert.ToInt32(Console.ReadLine());
 
-        int orderId;
-        bool ok = int.TryParse(input.Trim(), out orderId);
-
-        if (!ok)
-        {
-            Console.WriteLine("Invalid Order ID. Please enter a number.\n");
-            continue;
-        }
-
-        for (int i = 0; i < pendingOrders.Count; i++)
-        {
-            if (pendingOrders[i].OrderID == orderId)
+            for (int i = 0; i < pendingOrders.Count; i++)
             {
-                order = pendingOrders[i];
-                break;
+                if (pendingOrders[i].OrderID == orderID)
+                {
+                    order = pendingOrders[i];
+                    break;
+                }
             }
-        }
 
-        if (order == null)
+            if (order == null)
+            {
+                Console.WriteLine("Error: Order does not exist or is not pending.");
+                continue;
+            }
+
+            break;
+        }
+        catch
         {
-            Console.WriteLine("Order not found in Pending Orders. Please try again.\n");
+            Console.WriteLine("Error: Invalid Order ID.");
         }
     }
 
@@ -1383,29 +1409,23 @@ void DeleteOrder()
     Console.WriteLine("Order Status: " + order.OrderStatus);
 
     string confirm = "";
-    bool validConfirm = false;
-
-    while (!validConfirm)
+    while (true)
     {
         Console.Write("Confirm deletion? [Y/N]: ");
-        confirm = Console.ReadLine();
+        confirm = Console.ReadLine().Trim().ToUpper();
 
-        if (string.IsNullOrWhiteSpace(confirm))
+        if (confirm == "")
         {
-            Console.WriteLine("Input cannot be empty.");
+            Console.WriteLine("Error: Input cannot be empty.");
             continue;
         }
 
-        confirm = confirm.Trim().ToUpper();
-
         if (confirm == "Y" || confirm == "N")
         {
-            validConfirm = true;
+            break;
         }
-        else
-        {
-            Console.WriteLine("Invalid option. Please enter Y or N.");
-        }
+
+        Console.WriteLine("Error: Invalid option.");
     }
 
     Console.WriteLine();
@@ -1417,6 +1437,7 @@ void DeleteOrder()
     }
 
     order.OrderStatus = "Cancelled";
+    refundStack.Push(order);
 
     Console.WriteLine("Order " + order.OrderID + " cancelled. Refund of $" +
                       order.OrderTotal.ToString("0.00") + " processed.");
@@ -1436,8 +1457,9 @@ void BulkProcessPendingOrdersToday()
     Console.WriteLine("=========================================");
 
     DateTime today = DateTime.Today;
-    int totalPending = 0;
+    int totalPendingToday = 0;
 
+    //Display all pending orders today (grouped by restaurant)
     Console.WriteLine("\nPending Orders:");
 
     for (int i = 0; i < restaurantList.Count; i++)
@@ -1447,33 +1469,31 @@ void BulkProcessPendingOrdersToday()
 
         foreach (Order o in r.orderQueue)
         {
-            if (o.OrderStatus == "Pending" &&
-                o.DeliveryDateTime.Date == today)
+            if (o.OrderStatus == "Pending" && o.DeliveryDateTime.Date == today)
             {
                 if (!printedRestaurant)
                 {
-                    Console.WriteLine("\nRestaurant: " + r.RestaurantName +
-                                      " (" + r.RestaurantId + ")");
+                    Console.WriteLine("\nRestaurant: " + r.RestaurantName + " (" + r.RestaurantId + ")");
                     printedRestaurant = true;
                 }
 
                 Console.WriteLine("Order ID: " + o.OrderID +
-                                  " | Delivery: " +
-                                  o.DeliveryDateTime.ToString("HH:mm"));
+                                  " | Delivery: " + o.DeliveryDateTime.ToString("HH:mm"));
 
-                totalPending++;
+                totalPendingToday++;
             }
         }
     }
 
-    Console.WriteLine("\nTotal Pending orders today: " + totalPending);
+    Console.WriteLine("\nTotal Pending orders today: " + totalPendingToday);
 
-    if (totalPending == 0)
+    if (totalPendingToday == 0)
     {
         Console.WriteLine("No Pending orders to process.");
         return;
     }
 
+    //Process pending orders today
     int processedCount = 0;
     int preparingCount = 0;
     int rejectedCount = 0;
@@ -1481,14 +1501,14 @@ void BulkProcessPendingOrdersToday()
     for (int i = 0; i < restaurantList.Count; i++)
     {
         Restaurant r = restaurantList[i];
+
         int queueSize = r.orderQueue.Count;
 
         for (int j = 0; j < queueSize; j++)
         {
             Order o = r.orderQueue.Dequeue();
 
-            if (o.OrderStatus == "Pending" &&
-                o.DeliveryDateTime.Date == today)
+            if (o.OrderStatus == "Pending" && o.DeliveryDateTime.Date == today)
             {
                 TimeSpan timeLeft = o.DeliveryDateTime - DateTime.Now;
 
@@ -1510,15 +1530,19 @@ void BulkProcessPendingOrdersToday()
         }
     }
 
-    double percentage = (processedCount * 100.0) / totalPending;
+    //Summary
+    double percentage = 0;
+    if (totalPendingToday > 0)
+    {
+        percentage = (processedCount * 100.0) / totalPendingToday;
+    }
 
     Console.WriteLine("\nSummary");
     Console.WriteLine("-------");
     Console.WriteLine("Orders processed: " + processedCount);
     Console.WriteLine("Preparing orders: " + preparingCount);
     Console.WriteLine("Rejected orders: " + rejectedCount);
-    Console.WriteLine("Percentage auto processed: " +
-                      percentage.ToString("0.00") + "%");
+    Console.WriteLine("Percentage auto processed: " + percentage.ToString("0.00") + "%");
 }
 
 
@@ -1586,7 +1610,8 @@ void DisplayTotalOrderAmount()
 
 
 
-// Advance Featuere (Favourite Orders) - Javier
+
+// Advance Featuere (Favourite Orders + Reorder from Favourite) - Javier
 
 void LoadFavouritesFromFile()
 {
@@ -1787,7 +1812,6 @@ void AddFavouriteOrder()
 
     favouriteDict[email].Add(template);
 
-    // Save to file
     SaveFavouriteToFile(email, restaurantId, items);
 
     Console.WriteLine("Favourite order saved!");
@@ -1798,27 +1822,38 @@ void CreateOrderFromFavourite()
     Console.WriteLine("\nFavourite Orders - Reorder");
     Console.WriteLine("===========================");
 
+    // Validate customer email (must exist in customerList)
     Customer customer = null;
     string email = "";
 
-    while (customer == null)
+    while (true)
     {
         Console.Write("Enter Customer Email: ");
         email = Console.ReadLine();
 
         if (string.IsNullOrWhiteSpace(email))
         {
-            Console.WriteLine("Email cannot be empty.\n");
+            Console.WriteLine("Error: Email cannot be empty.\n");
             continue;
         }
 
         email = email.Trim();
+
+        if (!email.Contains("@") || !email.Contains("."))
+        {
+            Console.WriteLine("Invalid email.\n");
+            continue;
+        }
+
         customer = customerList.Find(c => c.EmailAddress == email);
 
         if (customer == null)
         {
-            Console.WriteLine("Customer not found. Please try again.\n");
+            Console.WriteLine("Error: Customer does not exist.\n");
+            continue;
         }
+
+        break; 
     }
 
     if (!favouriteDict.ContainsKey(email) || favouriteDict[email].Count == 0)
@@ -1827,6 +1862,7 @@ void CreateOrderFromFavourite()
         return;
     }
 
+    // List favourites
     Console.WriteLine("\nFavourite Orders:");
     for (int i = 0; i < favouriteDict[email].Count; i++)
     {
@@ -1840,6 +1876,7 @@ void CreateOrderFromFavourite()
         Console.WriteLine((i + 1) + ". " + restName + " (" + restId + ")");
     }
 
+    // Choose favourite number
     int choice = 0;
     while (true)
     {
@@ -1853,7 +1890,6 @@ void CreateOrderFromFavourite()
         }
 
         bool okChoice = int.TryParse(input.Trim(), out choice);
-
         if (!okChoice || choice < 1 || choice > favouriteDict[email].Count)
         {
             Console.WriteLine("Invalid choice. Please try again.\n");
@@ -1863,10 +1899,11 @@ void CreateOrderFromFavourite()
         break;
     }
 
+    // Get favourite template
     string selected = favouriteDict[email][choice - 1];
     string[] selectedParts = selected.Split('|', 2);
     string restaurantId = selectedParts[0];
-    string items = selectedParts.Length > 1 ? selectedParts[1] : "";
+    string items = (selectedParts.Length > 1) ? selectedParts[1] : "";
 
     Restaurant restaurant = restaurantList.Find(r => r.RestaurantId == restaurantId);
     if (restaurant == null)
@@ -1890,8 +1927,13 @@ void CreateOrderFromFavourite()
         }
 
         DateTime deliveryDate;
-        bool okDate = DateTime.TryParseExact(inputDate.Trim(), "dd/MM/yyyy", null,
-            System.Globalization.DateTimeStyles.None, out deliveryDate);
+        bool okDate = DateTime.TryParseExact(
+            inputDate.Trim(),
+            "dd/MM/yyyy",
+            null,
+            System.Globalization.DateTimeStyles.None,
+            out deliveryDate
+        );
 
         if (!okDate)
         {
@@ -1928,6 +1970,7 @@ void CreateOrderFromFavourite()
         break;
     }
 
+    // Address validation
     string address = "";
     while (true)
     {
@@ -1944,7 +1987,7 @@ void CreateOrderFromFavourite()
         break;
     }
 
-    // Create order 
+    // Create order
     Order order = new Order(customer, restaurant);
     order.DeliveryDateTime = deliveryDateTime;
     order.DeliveryAddress = address;
@@ -1985,8 +2028,166 @@ void CreateOrderFromFavourite()
         return;
     }
 
-    order.CalculateOrderTotal();
+    //Special request validation
+    while (true)
+    {
+        Console.Write("Add special request? [Y/N]: ");
+        string reqAns = Console.ReadLine();
 
+        if (string.IsNullOrWhiteSpace(reqAns))
+        {
+            Console.WriteLine("Error: Input cannot be empty.");
+            continue;
+        }
+
+        reqAns = reqAns.Trim().ToUpper();
+
+        if (reqAns == "Y")
+        {
+            Console.Write("Enter special request: ");
+            string sreq = Console.ReadLine();
+
+            if (!string.IsNullOrWhiteSpace(sreq) && order.orderedItems.Count > 0)
+            {
+                order.orderedItems[0].Customise = sreq.Trim();
+            }
+            break;
+        }
+        else if (reqAns == "N")
+        {
+            break;
+        }
+        else
+        {
+            Console.WriteLine("Error: Please enter Y or N.");
+        }
+    }
+
+    //Discount code (after special request) + validation
+    while (true)
+    {
+        Console.Write("Enter discount code if any (or press Enter to skip): ");
+        string disc = Console.ReadLine();
+
+        if (disc == null) disc = "";
+        disc = disc.Trim().ToUpper();
+
+        if (disc == "")
+        {
+            break;
+        }
+        else if (disc == "PHOL")
+        {
+            order.special = new SpecialOffer("PHOL", "10% off order", 10);
+            break;
+        }
+        else if (disc == "DELI")
+        {
+            order.special = new SpecialOffer("DELI", "Free delivery on orders more than $30", 0);
+            break;
+        }
+        else
+        {
+            Console.WriteLine("Invalid discount code.");
+        }
+    }
+
+    // Calculate total + show breakdown
+    double orderTotal = order.CalculateOrderTotal();
+
+    double subtotal = 0;
+    for (int i = 0; i < order.orderedItems.Count; i++)
+    {
+        subtotal += order.orderedItems[i].CalculateSubtotal();
+    }
+
+    double delivery = 5.00;
+    double discount = 0.00;
+
+    if (order.special != null)
+    {
+        if (order.special.OfferCode == "PHOL")
+        {
+            discount = subtotal * 0.10;
+        }
+        if (order.special.OfferCode == "DELI" && subtotal >= 30)
+        {
+            delivery = 0;
+        }
+    }
+
+    Console.WriteLine($"\nOrder Total: ${subtotal:F2} + ${delivery:F2} (delivery) - ${discount:F2} (discount) = ${orderTotal:F2}");
+
+    // Proceed to payment validation
+    while (true)
+    {
+        Console.Write("Proceed to payment? [Y/N]: ");
+        string propay = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(propay))
+        {
+            Console.WriteLine("Error: Input cannot be empty.");
+            continue;
+        }
+
+        propay = propay.Trim().ToUpper();
+
+        if (propay == "N")
+        {
+            Console.WriteLine("Order cancelled.");
+            return;
+        }
+        else if (propay == "Y")
+        {
+            break;
+        }
+        else
+        {
+            Console.WriteLine("Error: Please enter Y or N.");
+        }
+    }
+
+    // Payment method validation
+    while (true)
+    {
+        Console.WriteLine("Payment method: ");
+        Console.Write("[CC] Credit Card / [PP] PayPal / [CD] Cash on Delivery: ");
+        string paymentmethod = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(paymentmethod))
+        {
+            Console.WriteLine("Error: Payment method cannot be empty.");
+            continue;
+        }
+
+        paymentmethod = paymentmethod.Trim().ToUpper();
+
+        if (paymentmethod == "CC")
+        {
+            order.OrderPaymentMethod = "Credit Card";
+            break;
+        }
+        else if (paymentmethod == "PP")
+        {
+            order.OrderPaymentMethod = "PayPal";
+            break;
+        }
+        else if (paymentmethod == "CD")
+        {
+            order.OrderPaymentMethod = "Cash on Delivery";
+            break;
+        }
+        else
+        {
+            Console.WriteLine("Error: Invalid payment method.");
+        }
+    }
+
+    // Mark paid + status
+    order.OrderPaid = true;
+    order.OrderStatus = "Pending";
+
+    // New order ID
     int maxOrderId = 1000;
     for (int i = 0; i < orderList.Count; i++)
     {
@@ -1995,13 +2196,35 @@ void CreateOrderFromFavourite()
     }
     order.OrderID = maxOrderId + 1;
 
-    order.OrderStatus = "Pending";
-    order.OrderPaid = true;
-    order.OrderPaymentMethod = "Favourite Reorder";
-    
+    // Add to collections/queue
     orderList.Add(order);
     customer.AddOrder(order);
     restaurant.orderQueue.Enqueue(order);
+
+    // Save to orders.csv
+    try
+    {
+        using (StreamWriter sw = new StreamWriter("orders.csv", true))
+        {
+            string itemsString = "";
+            for (int i = 0; i < order.orderedItems.Count; i++)
+            {
+                if (i > 0) itemsString += "|";
+                itemsString += order.orderedItems[i].ItemName + "," + order.orderedItems[i].QtyOrdered;
+            }
+
+            sw.WriteLine(
+                $"{order.OrderID},{customer.EmailAddress},{restaurant.RestaurantId}," +
+                $"{order.DeliveryDateTime:dd/MM/yyyy},{order.DeliveryDateTime:HH:mm}," +
+                $"{order.DeliveryAddress},{order.OrderDateTime:dd/MM/yyyy HH:mm}," +
+                $"{order.OrderTotal},{order.OrderStatus},\"{itemsString}\""
+            );
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error saving order: " + ex.Message);
+    }
 
     Console.WriteLine("\nOrder " + order.OrderID + " created from favourite! Status: Pending");
 }
