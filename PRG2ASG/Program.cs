@@ -466,8 +466,11 @@ static void ListAllOrdersBasicInfo(List<Order> orderList)
             try
             {
                 string customerLine = customerName + "," + email;
-                File.AppendAllText("customers.csv", "\n" + customerLine);
-                Console.WriteLine("New customer created successfully!");
+            using (StreamWriter sw = new StreamWriter("customers.csv", true))
+            {
+                sw.WriteLine(customerLine);
+            }
+            Console.WriteLine("New customer created successfully!");
             }
             catch (Exception ex)
             {
@@ -592,34 +595,33 @@ static void ListAllOrdersBasicInfo(List<Order> orderList)
             orderList.Add(order);
             customer.AddOrder(order);
             restaurant.orderQueue.Enqueue(order);
-            try
-{
-    string items = "";
-    for (int i = 0; i < order.orderedItems.Count; i++)
+    try
     {
-        if (i > 0) items += "|";
-        items += order.orderedItems[i].ItemName + "," + order.orderedItems[i].QtyOrdered;
-    }
-    
-    string line = order.OrderID + "," + 
-                  customer.EmailAddress + "," + 
-                  restaurant.RestaurantId + "," + 
-                  order.DeliveryDateTime.ToString("dd/MM/yyyy") + "," + 
-                  order.DeliveryDateTime.ToString("HH:mm") + "," + 
-                  order.DeliveryAddress + "," + 
-                  order.OrderDateTime.ToString("dd/MM/yyyy HH:mm") + "," + 
-                  order.OrderTotal + "," + 
-                  order.OrderStatus + "," + 
-                  "\"" + items + "\"";
-    
-    File.AppendAllText("orders.csv", "\n" + line);
-}
-catch (Exception ex)
-{
-    Console.WriteLine("Error saving: " + ex.Message);
-}
+        using (StreamWriter sw = new StreamWriter("orders.csv", true))
+        {
+           
+            string itemsString = "";
+            for (int i = 0; i < order.orderedItems.Count; i++)
+            {
+                if (i > 0) itemsString += "|";
+                itemsString += order.orderedItems[i].ItemName + "," + order.orderedItems[i].QtyOrdered;
+            }
 
-            Console.WriteLine($"\nOrder {order.OrderID} created successfully! Status: {order.OrderStatus}");
+            sw.WriteLine(
+                $"{order.OrderID},{customer.EmailAddress},{restaurant.RestaurantId}," +
+                $"{order.DeliveryDateTime:dd/MM/yyyy},{order.DeliveryDateTime:HH:mm}," +
+                $"{order.DeliveryAddress},{order.OrderDateTime:dd/MM/yyyy HH:mm}," +
+                $"{order.OrderTotal},{order.OrderStatus},\"{itemsString}\""
+            );
+        }
+        Console.WriteLine("Order saved successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error saving order: " + ex.Message);
+    }
+
+    Console.WriteLine($"\nOrder {order.OrderID} created successfully! Status: {order.OrderStatus}");
         }
 
 // Javier - feature 6
