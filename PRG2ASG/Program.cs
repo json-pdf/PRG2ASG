@@ -429,177 +429,376 @@ static void ListAllOrdersBasicInfo(List<Order> orderList)
 
 //Jayson - feature 5
 
-        void neworder()
+void neworder()
+{
+    Console.WriteLine("\nCreate a New Order");
+    Console.WriteLine("===================");
+
+    // Validate Customer Email
+    string email = "";
+    while (true)
+    {
+        Console.Write("Enter Customer Email: ");
+        email = Console.ReadLine().Trim();
+
+        if (email == "")
         {
-            Console.WriteLine("\nCreate a New Order");
-            Console.WriteLine("===================");
-            Console.Write("Enter Customer Email:");
-            string email = Console.ReadLine();
+            Console.WriteLine("Error: Email cannot be empty.");
+            continue;
+        }
 
-            Console.Write("Enter Restaurant ID: ");
-            string restaurantId = Console.ReadLine();
-
-            Console.Write("Enter Delivery Date (dd/mm/yyyy): ");
-            string inputdate = Console.ReadLine();
-
-            DateTime deliverydate = DateTime.ParseExact(inputdate, "dd/MM/yyyy", null);
-
-            Console.Write("Enter Delivery Time (hh:mm): ");
-            string inputtime = Console.ReadLine();
-            TimeSpan deliverytime = TimeSpan.Parse(inputtime);
-            DateTime deliverydatetime = deliverydate.Date + deliverytime;
-
-            Console.Write("Enter Delivery Address: ");
-            string address = Console.ReadLine();
-    
-    Customer customer = customerList.Find(c => c.EmailAddress == email);
-        if (customer == null)
+        if (!email.Contains("@") || !email.Contains("."))
         {
-            Console.WriteLine("Customer not found. Creating new customer account...");
-            Console.Write("Enter Customer Name: ");
-            string customerName = Console.ReadLine();
+            Console.WriteLine("Error: Invalid email format.");
+            continue;
+        }
 
-            customer = new Customer(email, customerName);
-            customerList.Add(customer);
+        break;
+    }
 
-            // Append new customer to customers.csv
-            try
+    // Validate Restaurant ID
+    string restaurantId = "";
+    Restaurant restaurant = null;
+    while (true)
+    {
+        Console.Write("Enter Restaurant ID: ");
+        restaurantId = Console.ReadLine().Trim();
+
+        if (restaurantId == "")
+        {
+            Console.WriteLine("Error: Restaurant ID cannot be empty.");
+            continue;
+        }
+
+        restaurant = restaurantList.Find(r => r.RestaurantId == restaurantId);
+        if (restaurant == null)
+        {
+            Console.WriteLine("Error: Restaurant not found.");
+            continue;
+        }
+        break;
+    }
+
+    // Validate Delivery Date
+    DateTime deliverydate = DateTime.MinValue; //placeholder value, so the code compiles without error.
+    while (true)
+    {
+        Console.Write("Enter Delivery Date (dd/mm/yyyy): ");
+        string inputdate = Console.ReadLine().Trim();
+
+        if (inputdate == "")
+        {
+            Console.WriteLine("Error: Date cannot be empty.");
+            continue;
+        }
+
+        try
+        {
+            deliverydate = DateTime.ParseExact(inputdate, "dd/MM/yyyy", null);
+            if (deliverydate.Date < DateTime.Now.Date)
             {
-                string customerLine = customerName + "," + email;
+                Console.WriteLine("Error: Delivery date cannot be in the past.");
+                continue;
+            }
+            break;
+        }
+        catch
+        {
+            Console.WriteLine("Error: Invalid date format. Use dd/mm/yyyy.");
+        }
+    }
+
+    // Validate Delivery Time
+    TimeSpan deliverytime = TimeSpan.Zero;
+    DateTime deliverydatetime = DateTime.MinValue;
+    while (true)
+    {
+        Console.Write("Enter Delivery Time (hh:mm): ");
+        string inputtime = Console.ReadLine().Trim();
+
+        if (inputtime == "")
+        {
+            Console.WriteLine("Error: Time cannot be empty.");
+            continue;
+        }
+
+        try
+        {
+            deliverytime = TimeSpan.Parse(inputtime);
+            deliverydatetime = deliverydate.Date + deliverytime;
+
+            if (deliverydatetime <= DateTime.Now)
+            {
+                Console.WriteLine("Error: Delivery time must be in the future.");
+                continue;
+            }
+            break;
+        }
+        catch
+        {
+            Console.WriteLine("Error: Invalid time format. Use hh:mm.");
+        }
+    }
+
+
+    // Validate Delivery Address
+    string address = "";
+    while (true)
+    {
+        Console.Write("Enter Delivery Address: ");
+        address = Console.ReadLine().Trim();
+
+        if (address == "")
+        {
+            Console.WriteLine("Error: Address cannot be empty.");
+            continue;
+        }
+        break;
+    }
+
+
+    Customer customer = customerList.Find(c => c.EmailAddress == email);
+    if (customer == null)
+    {
+        Console.WriteLine("Customer not found. Creating new customer account...");
+
+        string customerName = "";
+        while (true)
+        {
+            Console.Write("Enter Customer Name: ");
+            customerName = Console.ReadLine().Trim();
+
+            if (customerName == "")
+            {
+                Console.WriteLine("Error: Name cannot be empty.");
+                continue;
+            }
+            break;
+        }
+
+        customer = new Customer(email, customerName);
+        customerList.Add(customer);
+
+        try
+        {
+            string customerLine = customerName + "," + email;
             using (StreamWriter sw = new StreamWriter("customers.csv", true))
             {
                 sw.WriteLine(customerLine);
             }
             Console.WriteLine("New customer created successfully!");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error saving customer to file: " + ex.Message);
-            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error saving customer: " + ex.Message);
+        }
+    }
+
+    Order order = new Order(customer, restaurant);
+    order.DeliveryDateTime = deliverydatetime;
+    order.DeliveryAddress = address;
+
+    Console.WriteLine("\nAvailable Food Items:");
+    List<FoodItem> availableItems = new List<FoodItem>();
+    int itemnumber = 1;
+
+    foreach (Menu m in restaurant.menuList)
+    {
+        foreach (FoodItem f in m.GetFoodList())
+        {
+            Console.WriteLine($"{itemnumber}. {f.ItemName} - ${f.ItemPrice}");
+            availableItems.Add(f);
+            itemnumber++;
+        }
+    }
+
+    while (true)
+    {
+        Console.Write("Enter item number (0 to finish): ");
+        string itemInput = Console.ReadLine().Trim();
+
+        int itemchoice;
+        if (!int.TryParse(itemInput, out itemchoice))
+        {
+            Console.WriteLine("Error: Invalid number.");
+            continue;
         }
 
-
-
-    Restaurant restaurant = restaurantList.Find(r => r.RestaurantId == restaurantId);
-            if (restaurant == null)
+        if (itemchoice == 0)
+        {
+            if (order.orderedItems.Count == 0)
             {
-        Console.WriteLine("Restaurant not found.");
-                    return;
+                Console.WriteLine("Error: Must order at least one item.");
+                continue;
             }
+            break;
+        }
 
-            Order order = new Order(customer, restaurant);
-            order.DeliveryDateTime = deliverydatetime;
-            order.DeliveryAddress = address;
+        if (itemchoice > 0 && itemchoice <= availableItems.Count)
+        {
+            FoodItem foodItem = availableItems[itemchoice - 1];
 
-            Console.WriteLine("\nAvailable Food Items:");
-            List<FoodItem> availableItems = new List<FoodItem>();
-            int itemnumber = 1;
-
-            foreach (Menu m in restaurant.menuList)
-            {
-                foreach (FoodItem f in m.GetFoodList())
-                {
-                    Console.WriteLine($"{itemnumber}. {f.ItemName} - ${f.ItemPrice}");
-                    availableItems.Add(f);
-                    itemnumber++;
-                }
-            }
-
+            // Validate Quantity
+            int qty = 0;
             while (true)
             {
-                Console.Write("Enter item number (0 to finish): ");
-                int itemchoice = Convert.ToInt32(Console.ReadLine());
-
-
-                if (itemchoice == 0)
+                Console.Write("Enter quantity: ");
+                try
                 {
+                    qty = Convert.ToInt32(Console.ReadLine());
+                    if (qty <= 0)
+                    {
+                        Console.WriteLine("Error: Quantity must be greater than 0.");
+                        continue;
+                    }
                     break;
                 }
-                if (itemchoice > 0 && itemchoice <= availableItems.Count)
+                catch
                 {
-                    FoodItem foodItem = availableItems[itemchoice - 1];
-                    Console.Write("Enter quantity: ");
-                    int qty = Convert.ToInt32(Console.ReadLine());
-                    OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
-                        foodItem.ItemName,
-                        foodItem.ItemDesc,
-                        foodItem.ItemPrice,
-                        foodItem.Customise,
-                        qty,
-                        0);
-                    order.AddOrderedFoodItem(orderedFoodItem);
-
-                }
-                else
-                {
-                    Console.WriteLine("Invalid item number. Please try again.");
+                    Console.WriteLine("Error: Invalid quantity.");
                 }
             }
-            Console.Write("Add special request? [Y/N]: ");
-            string reqans = Console.ReadLine();
 
-            if (reqans.ToUpper() == "Y")
-            {
-                Console.Write("Enter special request: ");
-                string sreq = Console.ReadLine();
+            OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
+                foodItem.ItemName,
+                foodItem.ItemDesc,
+                foodItem.ItemPrice,
+                foodItem.Customise,
+                qty,
+                0);
+            order.AddOrderedFoodItem(orderedFoodItem);
+        }
+        else
+        {
+            Console.WriteLine("Error: Invalid item number.");
+        }
+    }
 
-                if (order.orderedItems.Count > 0)
-                {
-                    order.orderedItems[0].Customise = sreq;
-                }
-            }
-            double orderTotal = order.CalculateOrderTotal();
-            double subtotal = orderTotal - 5.00;
-            Console.WriteLine($"\nOrder Total: ${subtotal:F2} + $5.00 (delivery) = ${orderTotal:F2}");
+    Console.Write("Add special request? [Y/N]: ");
+    string reqans = Console.ReadLine().Trim().ToUpper();
 
-            Console.Write("Proceed to payment? [Y/N]: ");
-            string propay = Console.ReadLine();
+    if (reqans == "Y")
+    {
+        Console.Write("Enter special request: ");
+        string sreq = Console.ReadLine().Trim();
 
-            if(propay.ToUpper() == "N")
-            {
-                Console.WriteLine("Order cancelled.");
-                return;
+        if (sreq != "" && order.orderedItems.Count > 0)
+        {
+            order.orderedItems[0].Customise = sreq;
+        }
+    }
 
-            }
 
-            Console.WriteLine("Payment method: ");
-            Console.Write("[CC] Credit Card / [PP] PayPal / [CD] Cash on Delivery: ");
-            String paymentmethod = Console.ReadLine().ToUpper();
+    // Jayson - Advance (c) special offer
+    string disc = "";
+    while (true)
+    {
+        Console.Write("Enter discount code if any (or press Enter to skip): ");
+        disc = Console.ReadLine().Trim().ToUpper();
 
-            if (paymentmethod == "CC")
-            {
-                order.OrderPaymentMethod = "Credit Card";
-            }
-            else if (paymentmethod == "PP")
-            {
-                order.OrderPaymentMethod = "PayPal";
-            }
-            else if (paymentmethod == "CD")
-            {
-                order.OrderPaymentMethod = "Cash on Delivery";
-            }
+        if (disc == "")
+        {
+            break; // No discount code, continue with order
+        }
+        else if (disc == "PHOL")
+        {
+            order.special = new SpecialOffer("PHOL", "10% off order", 10);
+            break;
+        }
+        else if (disc == "DELI")
+        {
+            order.special = new SpecialOffer("DELI", "Free delivery on orders more than $30", 0);
+            break;
+        }
+        else if (disc == "X")
+        {
+            break;
+        }
+    }
 
-            order.OrderPaid = true;
-            order.OrderStatus = "Pending";
+    double orderTotal = order.CalculateOrderTotal();
+    double subtotal = 0;
+    foreach (var item in order.orderedItems)
+    {
+        subtotal += item.CalculateSubtotal();
+    }
 
-            int maxOrderId = 1000;
-            foreach (Order o in orderList)
-            {
-                if (o.OrderID > maxOrderId)
-                {
-                    maxOrderId = o.OrderID;
-                }
-            }
-            order.OrderID = maxOrderId + 1;
+    double delivery = 5.00;
+    double discount = 0;
 
-            orderList.Add(order);
-            customer.AddOrder(order);
-            restaurant.orderQueue.Enqueue(order);
+    if (order.special != null)
+    {
+        if (order.special.OfferCode == "PHOL")
+        {
+            discount = subtotal * 0.10;
+        }
+        if (order.special.OfferCode == "DELI" && subtotal >= 30)
+        {
+            delivery = 0;
+        }
+    }
+
+    Console.WriteLine($"\nOrder Total: ${subtotal:F2} + ${delivery:F2} (delivery) - ${discount:F2} (discount) = ${orderTotal:F2}");
+
+    Console.Write("Proceed to payment? [Y/N]: ");
+    string propay = Console.ReadLine().Trim().ToUpper();
+
+    if (propay != "Y")
+    {
+        Console.WriteLine("Order cancelled.");
+        return;
+    }
+
+    // Validation for Payment Method
+    string paymentmethod = "";
+    while (true)
+    {
+        Console.WriteLine("Payment method: ");
+        Console.Write("[CC] Credit Card / [PP] PayPal / [CD] Cash on Delivery: ");
+        paymentmethod = Console.ReadLine().Trim().ToUpper();
+
+        if (paymentmethod == "CC")
+        {
+            order.OrderPaymentMethod = "Credit Card";
+            break;
+        }
+        else if (paymentmethod == "PP")
+        {
+            order.OrderPaymentMethod = "PayPal";
+            break;
+        }
+        else if (paymentmethod == "CD")
+        {
+            order.OrderPaymentMethod = "Cash on Delivery";
+            break;
+        }
+        else
+        {
+            Console.WriteLine("Error: Invalid payment method.");
+        }
+    }
+
+    order.OrderPaid = true;
+    order.OrderStatus = "Pending";
+
+    int maxOrderId = 1000;
+    foreach (Order o in orderList)
+    {
+        if (o.OrderID > maxOrderId)
+        {
+            maxOrderId = o.OrderID;
+        }
+    }
+    order.OrderID = maxOrderId + 1;
+
+    orderList.Add(order);
+    customer.AddOrder(order);
+    restaurant.orderQueue.Enqueue(order);
+
     try
     {
         using (StreamWriter sw = new StreamWriter("orders.csv", true))
         {
-           
             string itemsString = "";
             for (int i = 0; i < order.orderedItems.Count; i++)
             {
@@ -622,7 +821,7 @@ static void ListAllOrdersBasicInfo(List<Order> orderList)
     }
 
     Console.WriteLine($"\nOrder {order.OrderID} created successfully! Status: {order.OrderStatus}");
-        }
+}
 
 // Javier - feature 6
 
@@ -762,17 +961,31 @@ void Modifyorder()
 {
     Console.WriteLine("Modify Order");
     Console.WriteLine("============");
-    Console.Write("Enter Customer Email: ");
-    string email = Console.ReadLine();
 
-    Customer customer = customerList.Find(c => c.EmailAddress == email);
-    if (customer == null)
+    // Validation for Customer Email
+    string email = "";
+    Customer customer = null;
+    while (true)
     {
-        Console.WriteLine("Customer does not exist.");
-        return;
+        Console.Write("Enter Customer Email: ");
+        email = Console.ReadLine().Trim();
+
+        if (email == "")
+        {
+            Console.WriteLine("Error: Email cannot be empty.");
+            continue;
+        }
+
+        customer = customerList.Find(c => c.EmailAddress == email);
+        if (customer == null)
+        {
+            Console.WriteLine("Error: Customer does not exist.");
+            continue;
+        }
+        break;
     }
 
-    //only pending orders using a loop
+    //only find pending orders
     List<Order> pendingOrders = new List<Order>();
     for (int i = 0; i < customer.OrderList.Count; i++)
     {
@@ -794,26 +1007,37 @@ void Modifyorder()
         Console.WriteLine(pendingOrders[i].OrderID);
     }
 
-    Console.Write("Enter Order ID: ");
-    int orderID = Convert.ToInt32(Console.ReadLine());
-
+    // Validate Order ID
     Order order = null;
-    for (int i = 0; i < pendingOrders.Count; i++)
+    while (true)
     {
-        if (pendingOrders[i].OrderID == orderID)
+        Console.Write("Enter Order ID: ");
+        try
         {
-            order = pendingOrders[i];
+            int orderID = Convert.ToInt32(Console.ReadLine());
+
+            for (int i = 0; i < pendingOrders.Count; i++)
+            {
+                if (pendingOrders[i].OrderID == orderID)
+                {
+                    order = pendingOrders[i];
+                    break;
+                }
+            }
+
+            if (order == null)
+            {
+                Console.WriteLine("Error: Order does not exist or is not pending.");
+                continue;
+            }
             break;
+        }
+        catch
+        {
+            Console.WriteLine("Error: Invalid Order ID.");
         }
     }
 
-    if (order == null)
-    {
-        Console.WriteLine("Order does not exist or is not pending.");
-        return;
-    }
-
-   
     Console.WriteLine("Order Items:");
     foreach (var item in order.orderedItems)
     {
@@ -823,34 +1047,104 @@ void Modifyorder()
     Console.WriteLine(order.DeliveryAddress);
     Console.WriteLine("Delivery Date/Time:");
     Console.WriteLine(order.DeliveryDateTime);
-    Console.Write("\nModify: [1] Items [2] Address [3] Delivery Time: ");
-    int modoption = Convert.ToInt32(Console.ReadLine());
+
+    // Validate Modification Option
+    int modoption = 0;
+    while (true)
+    {
+        Console.Write("\nModify: [1] Items [2] Address [3] Delivery Time: ");
+        try
+        {
+            modoption = Convert.ToInt32(Console.ReadLine());
+
+            if (modoption < 1 || modoption > 3)
+            {
+                Console.WriteLine("Error: Please enter 1, 2, or 3.");
+                continue;
+            }
+            break;
+        }
+        catch
+        {
+            Console.WriteLine("Error: Invalid option.");
+        }
+    }
 
     if (modoption == 1)
     {
-        Console.WriteLine("Enter changes to items [R]emove/[A]dd items]: ");
-        string itemmod = Console.ReadLine();
-
-        if (itemmod.ToUpper() == "R")
+        // Validate Item Modification Choice
+        string itemmod = "";
+        while (true)
         {
+            Console.Write("Enter changes to items [R]emove/[A]dd items: ");
+            itemmod = Console.ReadLine().Trim().ToUpper();
+
+            if (itemmod == "")
+            {
+                Console.WriteLine("Error: Input cannot be empty.");
+                continue;
+            }
+
+            if (itemmod != "R" && itemmod != "A")
+            {
+                Console.WriteLine("Error: Please enter R or A.");
+                continue;
+            }
+            break;
+        }
+
+        if (itemmod == "R")
+        {
+            if (order.orderedItems.Count == 0)
+            {
+                Console.WriteLine("Error: No items to remove.");
+                return;
+            }
+
             Console.WriteLine("Current items: ");
             for (int i = 0; i < order.orderedItems.Count; i++)
             {
-                Console.WriteLine($"{i + 1}.{order.orderedItems[i].ItemName} - {order.orderedItems[i].QtyOrdered}");
+                Console.WriteLine($"{i + 1}. {order.orderedItems[i].ItemName} - {order.orderedItems[i].QtyOrdered}");
             }
 
-            Console.Write("Enter item number to remove: ");
-            int remove = Convert.ToInt32(Console.ReadLine());
-            if (remove > 0 && remove <= order.orderedItems.Count)
+            // Validate Item Removal
+            while (true)
             {
-                OrderedFoodItem item = order.orderedItems[remove - 1];
-                string itemName = item.ItemName;
-                order.RemoveOrderedFoodItem(item);
-                Console.WriteLine($"Order {orderID} updated. {itemName} has been removed.");
+                Console.Write("Enter item number to remove: ");
+                try
+                {
+                    int remove = Convert.ToInt32(Console.ReadLine());
+
+                    if (remove < 1 || remove > order.orderedItems.Count)
+                    {
+                        Console.WriteLine("Error: Invalid item number.");
+                        continue;
+                    }
+
+                    OrderedFoodItem item = order.orderedItems[remove - 1];
+                    string itemName = item.ItemName;
+                    order.RemoveOrderedFoodItem(item);
+                    Console.WriteLine($"{itemName} has been removed.");
+
+                    // deletes empty orders
+                    if (order.orderedItems.Count == 0)
+                    {
+                        customer.OrderList.Remove(order);
+                        orderList.Remove(order);
+                        Console.WriteLine($"Order {order.OrderID} has been deleted as all items were removed.");
+                        return;
+                    }
+
+                    break;
+                }
+                catch
+                {
+                    Console.WriteLine("Error: Invalid input.");
+                }
             }
         }
 
-        if (itemmod.ToUpper() == "A")
+        if (itemmod == "A")
         {
             Console.WriteLine("Available Food items:");
             List<FoodItem> availableItems = new List<FoodItem>();
@@ -864,22 +1158,65 @@ void Modifyorder()
                     itemnumber++;
                 }
             }
-            Console.Write("Enter item number to add: ");
-            int choice = Convert.ToInt32(Console.ReadLine());
-            if (choice > 0 && choice <= availableItems.Count)
+
+            if (availableItems.Count == 0)
             {
-                FoodItem foodItem = availableItems[choice - 1];
-                Console.Write("Enter quantity: ");
-                int qty = Convert.ToInt32(Console.ReadLine());
-                OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
-                    foodItem.ItemName,
-                    foodItem.ItemDesc,
-                    foodItem.ItemPrice,
-                    foodItem.Customise,
-                    qty,
-                    0);
-                order.AddOrderedFoodItem(orderedFoodItem);
-                Console.WriteLine($"Order {orderID} updated. {qty} of {foodItem.ItemName} has been added.");
+                Console.WriteLine("Error: No items available.");
+                return;
+            }
+
+            // Validate Item Selection
+            while (true)
+            {
+                Console.Write("Enter item number to add: ");
+                try
+                {
+                    int choice = Convert.ToInt32(Console.ReadLine());
+
+                    if (choice < 1 || choice > availableItems.Count)
+                    {
+                        Console.WriteLine("Error: Invalid item number.");
+                        continue;
+                    }
+
+                    FoodItem foodItem = availableItems[choice - 1];
+
+                    // Validate Quantity
+                    int qty = 0;
+                    while (true)
+                    {
+                        Console.Write("Enter quantity: ");
+                        try
+                        {
+                            qty = Convert.ToInt32(Console.ReadLine());
+                            if (qty <= 0)
+                            {
+                                Console.WriteLine("Error: Quantity must be greater than 0.");
+                                continue;
+                            }
+                            break;
+                        }
+                        catch
+                        {
+                            Console.WriteLine("Error: Invalid quantity.");
+                        }
+                    }
+
+                    OrderedFoodItem orderedFoodItem = new OrderedFoodItem(
+                        foodItem.ItemName,
+                        foodItem.ItemDesc,
+                        foodItem.ItemPrice,
+                        foodItem.Customise,
+                        qty,
+                        0);
+                    order.AddOrderedFoodItem(orderedFoodItem);
+                    Console.WriteLine($"Order {order.OrderID} updated. {qty} of {foodItem.ItemName} has been added.");
+                    break;
+                }
+                catch
+                {
+                    Console.WriteLine("Error: Invalid input.");
+                }
             }
         }
         order.CalculateOrderTotal();
@@ -887,18 +1224,57 @@ void Modifyorder()
     }
     else if (modoption == 2)
     {
-        Console.Write("Enter new Delivery Address: ");
-        string newaddress = Console.ReadLine();
+        // Validate New Address
+        string newaddress = "";
+        while (true)
+        {
+            Console.Write("Enter new Delivery Address: ");
+            newaddress = Console.ReadLine().Trim();
+
+            if (newaddress == "")
+            {
+                Console.WriteLine("Error: Address cannot be empty.");
+                continue;
+            }
+            break;
+        }
         order.DeliveryAddress = newaddress;
-        Console.WriteLine($"Order {orderID} updated.\nNew Address: {newaddress}");
+        Console.WriteLine($"Order {order.OrderID} updated.\nNew Address: {newaddress}");
     }
     else if (modoption == 3)
     {
-        Console.Write("Enter new Delivery Time (hh:mm): ");
-        string newtime = Console.ReadLine();
-        TimeSpan time = TimeSpan.Parse(newtime);
-        order.DeliveryDateTime = order.DeliveryDateTime.Date + time;
-        Console.WriteLine($"Order {orderID} updated. New Delivery Time: {time}");
+        // Validate New Delivery Time
+        while (true)
+        {
+            Console.Write("Enter new Delivery Time (hh:mm): ");
+            string newtime = Console.ReadLine().Trim();
+
+            if (newtime == "")
+            {
+                Console.WriteLine("Error: Time cannot be empty.");
+                continue;
+            }
+
+            try
+            {
+                TimeSpan time = TimeSpan.Parse(newtime);
+                DateTime newDeliveryDateTime = order.DeliveryDateTime.Date + time;
+
+                if (newDeliveryDateTime <= DateTime.Now)
+                {
+                    Console.WriteLine("Error: Delivery time must be in the future.");
+                    continue;
+                }
+
+                order.DeliveryDateTime = newDeliveryDateTime;
+                Console.WriteLine($"Order {order.OrderID} updated. New Delivery Time: {time}");
+                break;
+            }
+            catch
+            {
+                Console.WriteLine("Error: Invalid time format. Use hh:mm.");
+            }
+        }
     }
 }
 
@@ -1165,12 +1541,12 @@ void DisplayTotalOrderAmount()
         // Go through every order in the restaurant queue
         foreach (Order o in r.orderQueue)
         {
-            // Successful orders
+
             if (o.OrderStatus == "Delivered")
             {
                 deliveredCount++;
 
-                // less delivery fee per order
+                // minus delivery fee per order
                 double net = o.OrderTotal - deliveryFee;
                 if (net < 0) net = 0;
 
