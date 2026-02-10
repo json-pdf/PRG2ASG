@@ -548,7 +548,7 @@ void menu()
                   order.OrderStatus + "," + 
                   "\"" + items + "\"";
     
-    File.AppendAllText("orders_-_Copy.csv", "\n" + line);
+    File.AppendAllText("orders.csv", "\n" + line);
 }
 catch (Exception ex)
 {
@@ -614,10 +614,10 @@ void Modifyorder()
         int modoption = Convert.ToInt32(Console.ReadLine());
         if (modoption == 1)
         {
-            Console.WriteLine("Enter changes to items [[E]dit quantity/[A]dd items]: ");
+            Console.WriteLine("Enter changes to items [R]emove/[A]dd items]: ");
             string itemmod = Console.ReadLine();
 
-            if (itemmod.ToUpper() == "E")
+            if (itemmod.ToUpper() == "R")
             {
                 Console.WriteLine("Current items: ");
                 for (int i = 0; i < order.orderedItems.Count; i++)
@@ -625,24 +625,14 @@ void Modifyorder()
                     Console.WriteLine($"{i + 1}.{order.orderedItems[i].ItemName} - {order.orderedItems[i].QtyOrdered}");
                 }
 
-                Console.Write("Emter item number to edit: ");
+                Console.Write("Enter item number to remove: ");
                 int remove = Convert.ToInt32(Console.ReadLine());
                 if (remove > 0 && remove <= order.orderedItems.Count)
                 {
                     OrderedFoodItem item = order.orderedItems[remove - 1];
-                    Console.Write($"Current quantity: {item.QtyOrdered} how many would you like to remove or add? (0 to remove all): ");
-                    int modqty = Convert.ToInt32(Console.ReadLine());
-                    if (modqty == 0)
-                    {
-                        order.RemoveOrderedFoodItem(item);
-                        Console.WriteLine($"Order {orderID} updated. {item.ItemName} has been removed.");
-                    }
-                    if (modqty > 0)
-                    {
-                        item.QtyOrdered = modqty;
-                        item.CalculateSubtotal();
-                        Console.WriteLine($"Order {orderID} updated. {item.ItemName} quantity has been updated.");
-                    }
+                    string itemName = item.ItemName;
+                    order.RemoveOrderedFoodItem(item);
+                    Console.WriteLine($"Order {orderID} updated. {itemName} has been removed.");
                 }
             }
 
@@ -708,4 +698,3 @@ void Modifyorder()
         }
 
     
-
